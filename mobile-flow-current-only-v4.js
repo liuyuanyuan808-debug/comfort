@@ -127,7 +127,7 @@ function enhancePrecheck() {
       const header = doc.createElement("section");
       header.className = "mcv-native-head-v4";
       header.setAttribute("aria-label", "Pump control header");
-      header.innerHTML = `<div class="mcv-native-status-v4"><span>9:41</span><span class="mcv-native-system-v4" aria-hidden="true"><span class="mcv-native-signal-v4"><i></i><i></i><i></i><i></i></span><span class="mcv-native-wifi-v4"></span><span class="mcv-native-battery-v4"></span></span></div><nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="../public/pump-product.png" alt="V3 breast pump"></div>`;
+      header.innerHTML = `<div class="mcv-native-status-v4"><span>9:41</span><span class="mcv-native-system-v4" aria-hidden="true"><span class="mcv-native-signal-v4"><i></i><i></i><i></i><i></i></span><span class="mcv-native-wifi-v4"></span><span class="mcv-native-battery-v4"></span></span></div><nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="/comfort/public/pump-product.png" alt="V3 breast pump"></div>`;
       page.prepend(header);
     }
     enhanceNativeControlHeader();
@@ -481,7 +481,7 @@ function finishSave() {
   layer.className = "v4-complete-layer";
   layer.setAttribute("role", "status");
   layer.setAttribute("aria-live", "polite");
-  layer.innerHTML = `<div class="v4-complete-sheet"><img class="v4-saved-bunny" src="assets/saved-bunny-reference.png" alt="" aria-hidden="true"><h3>Saved</h3><p>舒适档位已保存</p></div>`;
+  layer.innerHTML = `<div class="v4-complete-sheet"><img class="v4-saved-bunny" src="/comfort/assets/saved-bunny-reference.png" alt="" aria-hidden="true"><h3>Saved</h3><p>舒适档位已保存</p></div>`;
   page.appendChild(layer);
   try { if (typeof win.updateProfileUi === "function") win.updateProfileUi(); } catch (_) {}
   win.setTimeout(() => {
@@ -598,8 +598,10 @@ function finishSave() {
     win.__showCalibrationV4 = showCalibration;
   }
 
-  const frame = document.getElementById("currentFrame");
-  if (!frame) return;
-  frame.addEventListener("load", () => install(frame));
-  if (frame.contentDocument && frame.contentDocument.readyState === "complete") install(frame);
+  ["currentFrame", "embeddedFrame"].forEach(function (id) {
+    const frame = document.getElementById(id);
+    if (!frame) return;
+    frame.addEventListener("load", function () { install(frame); });
+    if (frame.contentDocument && frame.contentDocument.readyState === "complete") install(frame);
+  });
 })();
