@@ -159,7 +159,26 @@ function enhancePrecheck() {
       header.innerHTML = `<div class="mcv-native-status-v4"><span>9:41</span><span class="mcv-native-system-v4" aria-hidden="true"><span class="mcv-native-signal-v4"><i></i><i></i><i></i><i></i></span><span class="mcv-native-wifi-v4"></span><span class="mcv-native-battery-v4"></span></span></div><nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="../assets/pump-product.png" alt="V3 breast pump"></div>`;
       page.prepend(header);
     }
+    // The prototype now opens directly on Pump Control. Keep the old dashboard
+    // out of the launch path while preserving the existing control-page logic.
+    function openPumpControlAsInitialView() {
+      const home = doc.getElementById("homeView");
+      const control = doc.getElementById("controlView");
+      const trigger = doc.getElementById("openControl");
+      if (home && control && home.hidden === false && control.hidden && trigger) trigger.click();
+    }
+    openPumpControlAsInitialView();
     enhanceNativeControlHeader();
+
+    // There is no longer a dashboard destination in this prototype. Retain the
+    // familiar back affordance without allowing it to reveal the removed page.
+    const controlBack = doc.getElementById("backHome");
+    if (controlBack) {
+      controlBack.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, true);
+    }
 
     const inviteCopy = doc.querySelector(".cn-comfort-invite .mcv-invite-copy");
     if (inviteCopy) inviteCopy.textContent = "仅需 1 分钟，找到「有力度但不疼」的舒适档位";
