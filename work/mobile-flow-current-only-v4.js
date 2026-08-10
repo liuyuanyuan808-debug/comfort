@@ -29,15 +29,15 @@
       .mcv-inner-surface{inset:0!important;border-radius:44px!important;overflow:hidden!important;background:#fbf8f4!important}
       .control-reference-page .control-reference-image{display:none!important}
       .mcv-native-head-v4{position:absolute;z-index:3;inset:0 0 auto;height:31.2%;overflow:hidden;color:#2d1d24;background:#fbf8f4;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
-      .mcv-native-status-v4{height:52px;padding:19px 7% 0;display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:800}
+      .mcv-native-status-v4{display:none!important}
       .mcv-native-system-v4{display:flex;align-items:center;gap:8px}
       .mcv-native-signal-v4{display:flex;align-items:flex-end;gap:2px;height:14px}.mcv-native-signal-v4 i{display:block;width:3px;border-radius:2px;background:#2d1d24}.mcv-native-signal-v4 i:nth-child(1){height:5px}.mcv-native-signal-v4 i:nth-child(2){height:8px}.mcv-native-signal-v4 i:nth-child(3){height:11px}.mcv-native-signal-v4 i:nth-child(4){height:14px}
       .mcv-native-wifi-v4{position:relative;width:18px;height:13px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::before{content:"";position:absolute;left:4px;top:2px;width:8px;height:7px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::after{content:"";position:absolute;left:7px;top:7px;width:4px;height:4px;border-radius:50%;background:#2d1d24}
       .mcv-native-battery-v4{position:relative;width:24px;height:12px;border:2px solid #2d1d24;border-radius:4px}.mcv-native-battery-v4::before{content:"";position:absolute;inset:2px;border-radius:2px;background:#2d1d24}.mcv-native-battery-v4::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;border-radius:0 2px 2px 0;background:#2d1d24}
-      .mcv-native-nav-v4{height:72px;padding:5px 6% 8px;display:grid;grid-template-columns:48px minmax(0,1fr) 96px;align-items:center}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
+      .mcv-native-nav-v4{height:80px;padding:16px 6% 12px;display:grid;grid-template-columns:48px minmax(0,1fr) 96px;align-items:center}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
       .mcv-native-icon-button-v4{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#2d1d24;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-back-v4{font-size:32px;font-weight:300;line-height:1;transform:translateY(-1px)}
       .mcv-native-tools-v4{justify-self:end;display:flex;width:96px;height:48px;align-items:center;justify-content:space-evenly;border-radius:26px;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-tools-v4 button{display:grid;place-items:center;width:42px;height:42px;color:#2d1d24;background:transparent}.mcv-native-help-v4{font-size:22px;font-weight:700}.mcv-native-gear-v4{font-size:27px;line-height:1}
-      .mcv-native-device-v4{position:absolute;left:6%;right:6%;top:118px;bottom:36px;display:grid;place-items:center;overflow:visible}.mcv-native-device-v4 img{display:block;width:min(64%,244px);max-height:100%;height:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 10px 12px rgba(83,58,62,.10))}
+      .mcv-native-device-v4{position:absolute;left:6%;right:6%;top:90px;bottom:36px;display:grid;place-items:center;overflow:visible}.mcv-native-device-v4 img{display:block;width:min(64%,244px);max-height:100%;height:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 10px 12px rgba(83,58,62,.10))}
       .mcv-content-scrim{inset:30.6% 0 0!important;background:#f9f7f5!important}
       .mcv-page-content{left:6%!important;right:6%!important;background:#f9f7f5!important}
       .mcv-mode-card,.mcv-level-module,.mcv-speed-module{width:100%!important;border-radius:24px!important}
@@ -156,7 +156,7 @@ function enhancePrecheck() {
       const header = doc.createElement("section");
       header.className = "mcv-native-head-v4";
       header.setAttribute("aria-label", "Pump control header");
-      header.innerHTML = `<div class="mcv-native-status-v4"><span>9:41</span><span class="mcv-native-system-v4" aria-hidden="true"><span class="mcv-native-signal-v4"><i></i><i></i><i></i><i></i></span><span class="mcv-native-wifi-v4"></span><span class="mcv-native-battery-v4"></span></span></div><nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="../assets/pump-product.png" alt="V3 breast pump"></div>`;
+      header.innerHTML = `<nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="../assets/pump-product.png" alt="V3 breast pump"></div>`;
       page.prepend(header);
     }
     // The prototype now opens directly on Pump Control. Keep the old dashboard
