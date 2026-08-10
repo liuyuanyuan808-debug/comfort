@@ -531,6 +531,7 @@ function enhancePrecheck() {
       `;
       doc.head.appendChild(style);
       style.textContent += "\n.v4-complete-layer{background:none!important}.v4-complete-sheet{min-height:100%!important;height:100%!important;border-radius:34px!important;box-shadow:none!important}\n.v4-reference{transform:translateY(-54px)!important}\n@media(max-height:760px){.v4-reference{transform:translateY(-36px)!important}}";
+      style.textContent += "\n.v4-reference .v4-help{box-sizing:border-box!important;width:20px!important;min-width:20px!important;max-width:20px!important;height:20px!important;min-height:20px!important;max-height:20px!important;margin:0!important;padding:0!important;border:1px solid #eadde1!important;border-radius:50%!important;background:rgba(255,255,255,.74)!important;font-size:11px!important;line-height:20px!important;box-shadow:none!important}";
 
       const page = doc.createElement("section");
       page.id = "cnCalibrationV4";
