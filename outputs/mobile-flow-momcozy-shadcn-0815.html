@@ -206,7 +206,7 @@
       });
     }, { once: true });
   </script>
-<script src="../work/mobile-flow-current-only-v4.js?v=20260817-stats-align-down-v105"></script>
+<script src="../work/mobile-flow-current-only-v4.js?v=20260812-muted-prompts-v24"></script>
 <script>
   /* The legacy calibration modal assumes the pre-design-system card markup.
      Handle its exit action before that stale synchronisation code runs. */
@@ -258,8 +258,8 @@
     setTimeout(installReliableExit, 350);
   })();
 </script>
-<script type="text/plain" data-disabled="legacy-expression-prompt">
-  /* Retired: the expression guide is now rendered in the persistent comfort card. */
+<script>
+  /* Isolated prompt only: it never rewrites existing prototype elements. */
   (() => {
     const frame = document.getElementById('currentFrame');
     const installPrompt = () => {
@@ -300,8 +300,8 @@
     setTimeout(installPrompt, 250);
   })();
 </script>
-<script type="text/plain" data-disabled="legacy-comfort-card-override">
-  /* Retired: legacy card renderer bypassed the ramp controller. */
+<script>
+  /* Scoped three-state Comfort Card — no surrounding module is changed. */
   (() => {
     const frame = document.getElementById('currentFrame');
     const installComfortCard = () => {
@@ -399,241 +399,8 @@
   })();
 </script>
 <script>
-  /* Keep each pump and its status on one shared, symmetrical center line. */
-  (() => {
-    const frame = document.getElementById('currentFrame');
-    const installPumpAlignment = () => {
-      const doc = frame?.contentDocument;
-      if (!doc || doc.getElementById('mczPumpAlignment')) return;
-      const style = doc.createElement('style');
-      style.id = 'mczPumpAlignment';
-      style.textContent = `
-        .mcv-native-pumps-v4,
-        .mcv-native-pump-stats-v6 {
-          width: 100% !important;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          column-gap: 0 !important;
-        }
-        .mcv-native-pump-v4 {
-          width: 100% !important;
-          justify-self: stretch !important;
-        }
-        .mcv-native-pump-stats-v6 > span {
-          justify-self: center !important;
-        }
-        .mcv-native-pump-stats-v6 {
-          transform: translateY(22px) !important;
-        }
-        .mcv-native-pump-stats-v6 > span {
-          width: max-content !important;
-          align-items: center !important;
-          text-align: center !important;
-        }
-      `;
-      doc.head.appendChild(style);
-    };
-    frame.addEventListener('load', installPumpAlignment);
-    setTimeout(installPumpAlignment, 500);
-  })();
-</script>
-<script>
-  /* Show the stimulation tip only during an active stimulation session. */
-  (() => {
-    const frame = document.getElementById('currentFrame');
-    const installStimulationTipRule = () => {
-      const doc = frame?.contentDocument;
-      if (!doc || doc.getElementById('mczStimulationTipRule')) return;
-      const tip = doc.querySelector('.mcv-native-message-canvas-v7');
-      const start = doc.getElementById('startPumping');
-      const actions = doc.getElementById('controlActions');
-      const options = doc.querySelector('.mcv-rhythm-options-v6');
-      if (!tip || !start || !actions || !options) return;
-
-      const sync = () => {
-        const stimulation = options.querySelector('[data-rhythm="Stimulation"]')?.classList.contains('is-active');
-        const running = start.hidden || !actions.hidden;
-        tip.hidden = !(stimulation && running);
-      };
-      const deferSync = () => doc.defaultView.setTimeout(sync, 0);
-      options.addEventListener('click', deferSync);
-      start.addEventListener('click', deferSync);
-      new doc.defaultView.MutationObserver(sync).observe(options, { subtree: true, attributes: true, attributeFilter: ['class'] });
-      new doc.defaultView.MutationObserver(sync).observe(start, { attributes: true, attributeFilter: ['hidden'] });
-      new doc.defaultView.MutationObserver(sync).observe(actions, { attributes: true, attributeFilter: ['hidden', 'class'] });
-      const marker = doc.createElement('meta');
-      marker.id = 'mczStimulationTipRule';
-      doc.head.appendChild(marker);
-      sync();
-    };
-    frame.addEventListener('load', installStimulationTipRule);
-    setTimeout(installStimulationTipRule, 550);
-  })();
-</script>
-<script>
-  /* Explain that comfort levels are adjustable only during Expression. */
-  (() => {
-    const frame = document.getElementById('currentFrame');
-    const installComfortModeCopy = () => {
-      const doc = frame?.contentDocument;
-      if (!doc || doc.getElementById('mczComfortModeCopy')) return;
-      const options = doc.querySelector('.mcv-rhythm-options-v6');
-      const start = doc.getElementById('startPumping');
-      const actions = doc.getElementById('controlActions');
-      if (!options || !start || !actions) return;
-      const style = doc.createElement('style');
-      style.id = 'mczComfortModeStyle';
-      style.textContent = `
-        body[data-mcz-comfort-readonly] #comfortEntry {
-          grid-template-columns: minmax(0, 1fr) !important;
-          min-height: 104px !important;
-          height: 104px !important;
-          padding: 16px 20px !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-info-v5 {
-          width: 100% !important;
-          height: 100% !important;
-          min-width: 0 !important;
-          justify-content: center !important;
-          gap: 5px !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-actions-v5 {
-          display: none !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-status-v5 {
-          display: inline-flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          padding: 4px 8px !important;
-          border-radius: 999px !important;
-          color: #9b304a !important;
-          background: #fff2f4 !important;
-          font-size: 10px !important;
-          font-weight: 700 !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-title-row-v5 {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: space-between !important;
-          width: 100% !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-copy-v5 {
-          color: #5d1025 !important;
-          font-size: 13px !important;
-          font-weight: 700 !important;
-          line-height: 1.35 !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-meta-v5 {
-          color: #887b80 !important;
-          font-size: 10px !important;
-          line-height: 1.35 !important;
-        }
-        body[data-mcz-comfort-readonly] #leftLevelZone,
-        body[data-mcz-comfort-readonly] #rightLevelZone,
-        body[data-mcz-comfort-readonly] #bothControl,
-        body[data-mcz-comfort-readonly] .reference-level-chip,
-        body[data-mcz-comfort-readonly] .reference-level-original-mask {
-          opacity: .42 !important;
-          pointer-events: none !important;
-          filter: saturate(.45) !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-status-v5,
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-copy-v5,
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-meta-v5 {
-          font-size: 0 !important;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-status-v5:after,
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-copy-v5:after,
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-meta-v5:after {
-          font-size: inherit;
-        }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-status-v5:after { font-size: 10px; }
-        body[data-mcz-comfort-readonly="Stimulation"] #comfortEntry .mcv-card-status-v5:after { content: '当前为刺激模式'; }
-        body[data-mcz-comfort-readonly="Mixed"] #comfortEntry .mcv-card-status-v5:after { content: '当前为混合模式'; }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-copy-v5:after { content: '🔒 舒适档位仅可在吸乳模式中调整'; font-size: 13px; }
-        body[data-mcz-comfort-readonly] #comfortEntry .mcv-card-meta-v5:after { content: '请在吸乳模式启动后，分别调整左右侧档位。'; font-size: 10px; }
-      `;
-      doc.head.appendChild(style);
-
-      const sync = () => {
-        const active = options.querySelector('.is-active')?.dataset.rhythm;
-        const running = start.hidden || !actions.hidden;
-        const card = doc.querySelector('#comfortEntry:not([hidden])');
-        const controlView = doc.getElementById('controlView');
-        if (!running || active === 'Expression') {
-          delete doc.body.dataset.mczComfortReadonly;
-          card?.removeAttribute('data-mcz-readonly-mode');
-          card?.classList.remove('mcz-readonly-comfort');
-          controlView?.classList.remove('mcz-comfort-locked');
-          return;
-        }
-        if (!card) return;
-        doc.body.dataset.mczComfortReadonly = active;
-        const status = card.querySelector('.mcv-card-status-v5');
-        const copy = card.querySelector('.mcv-card-copy-v5');
-        const meta = card.querySelector('.mcv-card-meta-v5');
-        const cardActions = card.querySelector('.mcv-card-actions-v5');
-        if (!status || !copy || !meta || !cardActions) return;
-        const desiredStatus = active === 'Mixed' ? '当前为混合模式' : '当前为刺激模式';
-        const desiredCopy = '🔒 舒适档位仅可在吸乳模式中调整';
-        const desiredMeta = '请在吸乳模式启动后，分别调整左右侧档位。';
-        const alreadyApplied = card.dataset.mczReadonlyMode === active &&
-          status.textContent === desiredStatus && copy.textContent === desiredCopy && meta.textContent === desiredMeta;
-        if (!alreadyApplied) {
-          status.textContent = desiredStatus;
-          copy.textContent = desiredCopy;
-          meta.textContent = desiredMeta;
-          cardActions.replaceChildren();
-        }
-        card.dataset.mczReadonlyMode = active;
-        card.classList.add('mcz-readonly-comfort');
-        controlView?.classList.add('mcz-comfort-locked');
-      };
-      const deferSync = () => doc.defaultView.setTimeout(sync, 0);
-      options.addEventListener('click', deferSync);
-      start.addEventListener('click', deferSync);
-      new doc.defaultView.MutationObserver(deferSync).observe(options, { subtree: true, attributes: true, attributeFilter: ['class'] });
-      new doc.defaultView.MutationObserver(deferSync).observe(start, { attributes: true, attributeFilter: ['hidden'] });
-      new doc.defaultView.MutationObserver(deferSync).observe(actions, { attributes: true, attributeFilter: ['hidden', 'class'] });
-      const marker = doc.createElement('meta');
-      marker.id = 'mczComfortModeCopy';
-      doc.head.appendChild(marker);
-      sync();
-    };
-    frame.addEventListener('load', installComfortModeCopy);
-    setTimeout(installComfortModeCopy, 600);
-  })();
-</script>
-<script>
-  /* Preserve comfort-card actions after the card is dynamically redrawn. */
-  (() => {
-    const frame = document.getElementById('currentFrame');
-    const installComfortActionBridge = () => {
-      const doc = frame?.contentDocument;
-      if (!doc || doc.getElementById('mczComfortActionBridge')) return;
-      doc.addEventListener('click', (event) => {
-        const button = event.target.closest('#comfortEntry button');
-        if (!button) return;
-        const label = button.textContent.trim();
-        if (!['重新设置', '舒适启动', '开始校准'].includes(label)) return;
-        const active = doc.querySelector('.mcv-rhythm-options-v6 .is-active')?.dataset.rhythm;
-        const start = doc.getElementById('startPumping');
-        const actions = doc.getElementById('controlActions');
-        const running = start?.hidden || !actions?.hidden;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        if (active === 'Expression' && running) {
-          doc.getElementById('startGuide')?.click();
-          return;
-        }
-        doc.defaultView.showToast?.('请先启动吸奶后，再调整舒适档位');
-      }, true);
-      const marker = doc.createElement('meta');
-      marker.id = 'mczComfortActionBridge';
-      doc.head.appendChild(marker);
-    };
-    frame.addEventListener('load', installComfortActionBridge);
-    setTimeout(installComfortActionBridge, 650);
-  })();
+/* 0815: Record a pumping session after it ends. */
+(()=>{const f=document.getElementById("currentFrame"),I=()=>{const d=f.contentDocument,w=f.contentWindow;if(!d||d.getElementById("mcvEndLog0815"))return;let z=d.createElement("style");z.id="mcvEndLog0815";z.textContent=`.mcv-log-mask{position:fixed;z-index:160;inset:0;display:flex;align-items:flex-end;background:rgba(36,15,27,.23);backdrop-filter:blur(3px)}.mcv-log-sheet{width:100%;min-height:70%;padding:20px 22px calc(22px + env(safe-area-inset-bottom));border-radius:32px 32px 0 0;background:#fffdfa;box-shadow:0 -18px 46px rgba(62,0,16,.15);font-family:Arial,"PingFang SC",sans-serif}.mcv-log-x{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:#fff;color:#240f1b;font-size:28px;box-shadow:0 7px 17px rgba(36,15,27,.06)}.mcv-log-sheet h2{text-align:center;margin:-38px 45px 0;color:#770523;font-family:Georgia,serif;font-size:28px;font-weight:500}.mcv-log-time{text-align:center;margin:10px 0 24px;color:#9f969b;font-size:13px}.mcv-log-sides{display:grid;grid-template-columns:1fr 1fr;gap:18px}.mcv-log-side{text-align:center}.mcv-log-drop{display:grid;place-items:center;width:112px;height:128px;margin:auto;border-radius:58% 58% 54% 54%;color:#fff;background:radial-gradient(circle at 50% 18%,rgba(255,255,255,.42),transparent 23%),linear-gradient(145deg,#ff9eb1,#ee7895);font:38px Georgia}.mcv-log-step{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:13px}.mcv-log-step button{width:38px;height:38px;border:0;border-radius:50%;background:#fff;color:#3e0010;font-size:22px;box-shadow:0 7px 17px rgba(36,15,27,.12)}.mcv-log-value{min-width:72px;padding:10px;border-radius:999px;background:#f9f7f5;color:#3e0010;font-size:20px}.mcv-log-value small{color:#9f969b;font-size:11px}.mcv-log-duration{display:flex;justify-content:space-between;width:100%;margin-top:25px;padding:15px 17px;border:1px solid #e4e2e3;border-radius:22px;background:#fff;color:#240f1b;font-size:14px}.mcv-log-duration span{color:#9f969b}.mcv-log-save{width:100%;height:50px;margin-top:16px;border:0;border-radius:999px;background:#770523;color:#fff;font-size:15px;font-weight:700}.mcv-log-save:disabled{background:#f0eeef;color:#9f969b}`;d.head.appendChild(z);let was=d.getElementById("startPumping").hidden;const T=t=>{let x=d.createElement("div");x.textContent=t;Object.assign(x.style,{position:"fixed",zIndex:170,left:"50%",bottom:"86px",transform:"translateX(-50%)",padding:"10px 16px",borderRadius:"999px",background:"rgba(62,0,16,.9)",color:"#fff",fontSize:"12px"});d.body.appendChild(x);w.setTimeout(()=>x.remove(),1500)},O=()=>{if(d.querySelector(".mcv-log-mask"))return;let l=0,r=0,du=0,ds=["未设置","10 分钟","15 分钟","20 分钟","30 分钟"],m=d.createElement("section");m.className="mcv-log-mask";m.innerHTML=`<section class="mcv-log-sheet" role="dialog" aria-modal="true"><button class="mcv-log-x" aria-label="关闭">×</button><h2>记录本次吸乳</h2><p class="mcv-log-time">今天 · 吸乳结束后记录</p><div class="mcv-log-sides"><div class="mcv-log-side"><div class="mcv-log-drop">L</div><div class="mcv-log-step"><button data-s="l" data-n="-5">−</button><div class="mcv-log-value" data-v="l">0 <small>ml</small></div><button data-s="l" data-n="5">＋</button></div></div><div class="mcv-log-side"><div class="mcv-log-drop">R</div><div class="mcv-log-step"><button data-s="r" data-n="-5">−</button><div class="mcv-log-value" data-v="r">0 <small>ml</small></div><button data-s="r" data-n="5">＋</button></div></div></div><button class="mcv-log-duration"><b>吸乳时长</b><span>未设置⌄</span></button><button class="mcv-log-save" disabled>保存记录</button></section>`;const U=()=>{m.querySelector("[data-v=l]").innerHTML=l+" <small>ml</small>";m.querySelector("[data-v=r]").innerHTML=r+" <small>ml</small>";m.querySelector(".mcv-log-duration span").textContent=ds[du]+"⌄";m.querySelector(".mcv-log-save").disabled=l+r===0};m.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{let q=b.dataset.s==="l"?l:r;q=Math.max(0,q+Number(b.dataset.n));b.dataset.s==="l"?l=q:r=q;U()});m.querySelector(".mcv-log-duration").onclick=()=>{du=(du+1)%ds.length;U()};let C=()=>m.remove();m.querySelector(".mcv-log-x").onclick=C;m.onclick=e=>{if(e.target===m)C()};m.querySelector(".mcv-log-save").onclick=()=>{try{w.localStorage.setItem("mobileFlowLastPumpLog0815",JSON.stringify({leftMl:l,rightMl:r,duration:ds[du],recordedAt:new Date().toISOString()}))}catch(e){}C();T("已保存本次吸乳记录")};d.body.appendChild(m)},C=()=>{let now=d.getElementById("startPumping").hidden;if(was&&!now)w.setTimeout(O,80);was=now};new w.MutationObserver(C).observe(d.getElementById("startPumping"),{attributes:true,attributeFilter:["hidden"]})};f.addEventListener("load",I);setTimeout(I,650)})();
 </script>
 </body>
 </html>

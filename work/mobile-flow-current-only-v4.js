@@ -1,7 +1,9 @@
 (function () {
   const PROFILE_KEY = "mobileFlowComfortProfileV2";
   const DRAFT_KEY = "mobileFlowComfortDraftV3";
-  const MAX_LEVEL = 15;
+  const PUMPING_HISTORY_KEY = "mobileFlowPumpingHistoryV1";
+  const TREND_PROMPT_KEY = "mobileFlowTrendPromptV1";
+  const MAX_LEVEL = 9;
 
   function install(frame) {
     const doc = frame.contentDocument;
@@ -14,6 +16,10 @@
     let comfortBubbleDemoTimer = 0;
     let comfortBubbleDismissed = false;
     let lastComfortInteractionAt = 0;
+    let selectedRhythm = "Stimulation";
+    let expressionGuideDeferred = false;
+    let manualExpressionTransition = false;
+    let calibrationInviteShownThisSession = false;
     // The base prototype swaps the two comfort nodes during state changes.
     // Keep one stable, dedicated card visible throughout a live session.
     let keepComfortCardVisible = false;
@@ -29,22 +35,31 @@
       .control-reference-page::-webkit-scrollbar{display:none!important}
       .mcv-inner-surface{position:relative!important;inset:auto!important;min-height:0!important;height:0!important;border-radius:44px!important;overflow:visible!important;background:#fbf8f4!important}
       .control-reference-page .control-reference-image{display:none!important}
-      .mcv-native-head-v4{position:relative;z-index:3;height:31.2svh;overflow:hidden;color:#2d1d24;background:#fbf8f4;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+      .mcv-native-head-v4{position:relative;z-index:3;height:36svh;overflow:hidden;color:#2d1d24;background:radial-gradient(ellipse 82% 66% at 50% 52%,rgba(255,237,174,.86) 0%,rgba(255,237,174,.52) 34%,rgba(255,229,203,.18) 62%,transparent 76%),linear-gradient(180deg,#f8d7d7 0%,#fce4d5 23%,#fff0c7 48%,#fce8df 71%,#f9f7f5 100%)!important;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif}
       .mcv-native-status-v4{display:none!important}
       .mcv-native-system-v4{display:flex;align-items:center;gap:8px}
       .mcv-native-signal-v4{display:flex;align-items:flex-end;gap:2px;height:14px}.mcv-native-signal-v4 i{display:block;width:3px;border-radius:2px;background:#2d1d24}.mcv-native-signal-v4 i:nth-child(1){height:5px}.mcv-native-signal-v4 i:nth-child(2){height:8px}.mcv-native-signal-v4 i:nth-child(3){height:11px}.mcv-native-signal-v4 i:nth-child(4){height:14px}
       .mcv-native-wifi-v4{position:relative;width:18px;height:13px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::before{content:"";position:absolute;left:4px;top:2px;width:8px;height:7px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::after{content:"";position:absolute;left:7px;top:7px;width:4px;height:4px;border-radius:50%;background:#2d1d24}
       .mcv-native-battery-v4{position:relative;width:24px;height:12px;border:2px solid #2d1d24;border-radius:4px}.mcv-native-battery-v4::before{content:"";position:absolute;inset:2px;border-radius:2px;background:#2d1d24}.mcv-native-battery-v4::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;border-radius:0 2px 2px 0;background:#2d1d24}
-      .mcv-native-nav-v4{position:fixed;z-index:50;top:0;left:0;right:0;height:80px;padding:16px 6% 12px;display:grid;grid-template-columns:48px minmax(0,1fr) 96px;align-items:center;background:#fbf8f4}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
+      .mcv-native-nav-v4{position:fixed;z-index:50;top:0;left:0;right:0;height:80px;padding:16px 6% 12px;display:grid;grid-template-columns:48px minmax(0,1fr) 96px;align-items:center;background-color:transparent!important;background-image:none!important;backdrop-filter:none!important}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
       .mcv-native-icon-button-v4{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#2d1d24;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-back-v4{font-size:32px;font-weight:300;line-height:1;transform:translateY(-1px)}
-      .mcv-native-tools-v4{justify-self:end;display:flex;width:96px;height:48px;align-items:center;justify-content:space-evenly;border-radius:26px;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-tools-v4 button{display:grid;place-items:center;width:42px;height:42px;color:#2d1d24;background:transparent}.mcv-native-help-v4{font-size:22px;font-weight:700}.mcv-native-gear-v4{font-size:27px;line-height:1}
-      .mcv-native-device-v4{position:absolute;left:6%;right:6%;top:90px;bottom:36px;display:grid;place-items:center;overflow:visible}.mcv-native-device-v4 img{display:block;width:min(64%,244px);max-height:100%;height:auto;object-fit:contain;object-position:center;filter:drop-shadow(0 10px 12px rgba(83,58,62,.10))}
+      .mcv-native-tools-v4{justify-self:end;display:flex;width:48px;height:48px;align-items:center;justify-content:center;border-radius:26px;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-tools-v4 button{display:grid;place-items:center;width:42px;height:42px;color:#2d1d24;background:transparent}.mcv-native-help-v4{font-size:22px;font-weight:700}.mcv-native-gear-v4{font-size:27px;line-height:1}
+      .mcv-native-message-canvas-v7{position:absolute;z-index:1;top:82px;left:12%;right:12%;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#76585f;font-size:11px;font-weight:600;line-height:1.5;text-align:center;pointer-events:none}.mcv-native-device-v4{position:absolute;z-index:2;left:6%;right:6%;top:140px;bottom:18px;display:grid;grid-template-rows:minmax(0,1fr) 30px;align-items:center;overflow:visible;background:transparent}.mcv-native-pumps-v4{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;width:100%;height:100%}.mcv-native-pump-v4{height:auto;aspect-ratio:1/1;align-self:center;background-image:url("../assets/dual-pump-transparent-v4.png");background-repeat:no-repeat;background-size:200% auto;filter:contrast(1.03);transform:scale(.7);transform-origin:center}.mcv-native-pump-v4--left{background-position:left center}.mcv-native-pump-v4--right{background-position:right center}.mcv-native-device-v4::before,.mcv-native-device-v4::after{display:none}.mcv-native-pump-stats-v6{position:relative;z-index:3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;align-items:end;width:100%;padding:0;color:#743044;text-align:center;background:transparent;transform:translateY(11px)}.mcv-native-pump-stats-v6 span{display:flex;flex-direction:column;gap:2px;align-items:center;justify-self:center;font-size:9px;font-weight:700;line-height:1}.mcv-native-pump-stats-v6 em{font-style:normal;color:#7c3347;font-size:12px;font-weight:800}.mcv-native-pump-stats-v6 small{color:#82747a;font-size:9.5px;font-weight:700}
       .mcv-content-scrim{display:none!important}
+      /* Suppress every legacy black/English prototype toast. Purpose-built
+         Chinese feedback uses .mcv-comfort-toast-v5 instead. */
+      #toast.toast{display:none!important}
+      .mcv-log-layer-v1{position:fixed;z-index:150;inset:0;display:flex;align-items:flex-end;background:rgba(54,33,41,.18);animation:mcv-log-fade-v1 .2s ease}.mcv-log-sheet-v1{width:100%;min-height:72%;display:flex;flex-direction:column;padding:24px 22px calc(22px + env(safe-area-inset-bottom,0px));border-radius:42px 42px 0 0;background:#fff8f4;box-shadow:0 -8px 24px rgba(78,27,46,.10);animation:mcv-log-rise-v1 .36s cubic-bezier(.2,.9,.25,1)}.mcv-log-top-v1{position:relative;text-align:center}.mcv-log-close-v1{position:absolute;left:0;top:0;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;color:#432d35;background:#fff;font-size:28px;font-weight:300;box-shadow:0 6px 18px rgba(70,37,48,.08)}.mcv-log-top-v1 h2{margin:5px 0 0;color:#82002b;font-family:"Snell Roundhand","Segoe Script","Bradley Hand",cursive;font-size:34px;line-height:1.1;font-weight:700}.mcv-log-date-v1{display:block;margin-top:8px;color:#9a8e93;font-size:12px;font-weight:650}.mcv-log-amounts-v1{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:26px 4px 22px}.mcv-log-side-v1{display:grid;justify-items:center;gap:10px}.mcv-log-cup-v1{display:grid;place-items:center;width:112px;height:112px;border-radius:50%;color:#fff;background:radial-gradient(circle at 48% 24%,rgba(255,255,255,.38),transparent 25%),linear-gradient(145deg,#ffb0bc,#ff829a);font-family:Georgia,serif;font-size:35px;text-shadow:0 2px 8px rgba(135,30,57,.16)}.mcv-log-step-v1{display:flex;align-items:center;justify-content:center;gap:12px;width:144px;height:46px;border-radius:999px;background:#fff;box-shadow:0 7px 18px rgba(80,43,54,.08)}.mcv-log-step-v1 button{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;color:#8d002b;background:#fce7ec;font-size:22px;line-height:1}.mcv-log-step-v1 strong{min-width:47px;color:#554149;font-size:18px;text-align:center}.mcv-log-step-v1 small{margin-left:-8px;color:#9d9296;font-size:11px}.mcv-log-duration-v1{display:flex;align-items:center;justify-content:space-between;min-height:58px;margin:0 4px;padding:0 18px;border:1px solid rgba(139,91,105,.12);border-radius:22px;background:#fff;box-shadow:0 6px 16px rgba(80,43,54,.06)}.mcv-log-duration-v1 strong{color:#34252b;font-size:15px}.mcv-log-duration-v1 span{color:#9d9296;font-size:13px}.mcv-log-save-v1{width:calc(100% - 8px);height:56px;margin:20px 4px 0;border-radius:999px;color:#fff;background:linear-gradient(120deg,#97032d,#ca5270);font-size:16px;font-weight:800;box-shadow:0 10px 22px rgba(123,0,38,.15)}.mcv-log-save-v1:disabled{color:#fff;background:#dbadb8;box-shadow:none}@keyframes mcv-log-rise-v1{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}@keyframes mcv-log-fade-v1{from{opacity:0}to{opacity:1}}
+      .mcv-log-layer-v1{display:block!important;background:rgba(54,33,41,.18)!important}.mcv-log-layer-v1:after{content:"";position:absolute;z-index:2;left:0;right:0;bottom:0;height:5.5%;background:#fff8f4;pointer-events:none}.mcv-log-reference-v1{position:absolute;left:0;right:0;bottom:0;display:block;width:100%;height:72.8%;object-fit:cover;object-position:bottom;border-radius:42px 42px 0 0}.mcv-log-zero-reference-v1{position:absolute;z-index:4;left:0;right:0;top:45%;display:block;width:100%;height:auto}.mcv-log-reference-action-v1{position:absolute;z-index:3;padding:0;background:transparent}.mcv-log-reference-close-v1{left:4%;top:29%;width:13%;height:8%}.mcv-log-reference-trash-v1{right:4%;top:29%;width:13%;height:8%}.mcv-log-reference-save-v1{left:7%;right:7%;bottom:5.5%;height:7%}.mcv-log-drag-v1{position:absolute;z-index:5;top:50%;width:37%;height:20%;overflow:hidden;border-radius:50%;touch-action:none;cursor:ns-resize}.mcv-log-drag-v1[data-log-drag="left"]{left:1%}.mcv-log-drag-v1[data-log-drag="right"]{right:2%}.mcv-log-fill-v1{position:absolute;left:0;right:0;bottom:0;height:var(--fill,0%);border-radius:0 0 50% 50%;background:rgba(255,255,255,.94);box-shadow:inset 0 1px 0 rgba(255,255,255,.8);transition:height .1s ease}.mcv-log-value-v1{position:absolute;z-index:6;top:76%;display:flex;align-items:baseline;justify-content:center;width:31%;height:7%;border-radius:999px;color:#301f27;background:rgba(255,255,255,.96);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;font-size:34px;font-weight:300;line-height:1}.mcv-log-value-v1 small{margin-left:3px;color:#93888d;font-size:15px;font-weight:500}.mcv-log-value-v1[data-log-output="left"]{left:8.5%}.mcv-log-value-v1[data-log-output="right"]{right:8.5%}.mcv-log-drag-v1.is-dragging .mcv-log-fill-v1{transition:none}.mcv-log-layer-v1.is-saved:after{display:none}.mcv-log-saved-sheet-v1{position:absolute;left:0;right:0;bottom:0;height:72.8%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 28px;border-radius:42px 42px 0 0;background:#fff8f4;text-align:center;animation:mcv-log-rise-v1 .36s cubic-bezier(.2,.9,.25,1)}.mcv-log-saved-bunny-v1{width:170px;height:138px;object-fit:cover;margin:0 0 20px}.mcv-log-saved-sheet-v1 h2{margin:0;color:#8d002b;font-family:"Snell Roundhand","Segoe Script","Bradley Hand",cursive;font-size:54px;line-height:1;font-weight:700}.mcv-log-saved-sheet-v1 h2:after{content:"";display:block;width:170px;height:18px;margin:3px auto 12px;border-bottom:3px solid #8d002b;border-radius:50%;transform:rotate(-2deg)}.mcv-log-saved-sheet-v1 p{margin:0;color:#8d7b80;font-size:14px}
+      .mcv-log-layer-v1:after{display:none}.mcv-log-full-reference-v1{position:absolute;left:0;right:0;bottom:0;display:block;width:100%;height:auto;border-radius:42px 42px 0 0;clip-path:inset(0 round 42px 42px 0 0)}.mcv-log-drag-v1{top:54%;width:31%;height:18%;overflow:hidden;border-radius:50%}.mcv-log-drag-v1[data-log-drag="left"]{left:7%}.mcv-log-drag-v1[data-log-drag="right"]{right:7%}.mcv-log-value-v1{display:none;top:75%;height:6.5%;background:#fff}.mcv-log-layer-v1.has-log-adjustment .mcv-log-value-v1{display:flex}.mcv-log-fill-v1{z-index:2}.mcv-log-layer-v1.is-saved:after{display:none}
+      .mcv-log-value-v1{width:34%;height:7%;top:75%}.mcv-log-value-v1[data-log-output="left"]{left:6%}.mcv-log-value-v1[data-log-output="right"]{right:6%}.mcv-log-fill-clip-v1{position:absolute;z-index:5;overflow:hidden;border-radius:50%;clip-path:ellipse(50% 50% at 50% 50%);pointer-events:none}.mcv-log-fill-clip-v1 .mcv-log-fill-v1{border-radius:0!important;-webkit-mask-image:radial-gradient(circle 19.5% at 50% 106%,transparent 99%,#000 100%);mask-image:radial-gradient(circle 19.5% at 50% 106%,transparent 99%,#000 100%)}.mcv-log-drag-v1{z-index:7;overflow:visible;border-radius:50%;background:transparent}
+      .mcv-log-fill-clip-v1 .mcv-log-fill-v1{border-radius:0!important;-webkit-mask-image:none!important;mask-image:none!important}.mcv-log-drag-v1{display:grid;place-items:center;z-index:7;overflow:visible;border-radius:50%;background:#fff;box-shadow:0 12px 22px rgba(63,35,44,.14);color:#2d1720;transition:top .1s ease}.mcv-log-drag-v1:before,.mcv-log-drag-v1:after{content:"";position:absolute;left:50%;width:14px;height:14px;border:0 solid currentColor;border-width:3px 3px 0 0}.mcv-log-drag-v1:before{top:27%;transform:translateX(-50%) rotate(-45deg)}.mcv-log-drag-v1:after{bottom:27%;transform:translateX(-50%) rotate(135deg)}.mcv-log-drag-v1:focus-visible{outline:3px solid rgba(238,156,167,.72);outline-offset:3px}
+      .mcv-log-reference-save-v1{z-index:8!important;border:0;border-radius:999px;transition:background .2s ease,box-shadow .2s ease,transform .2s ease}.mcv-log-reference-save-v1:disabled{cursor:not-allowed}.mcv-log-reference-save-v1.is-enabled{background:#770523!important;box-shadow:0 10px 22px rgba(119,5,35,.17)!important;cursor:pointer}.mcv-log-reference-save-v1.is-enabled:after{content:"Save";color:#fff;font-family:"Aeonik Soft Pro",-apple-system,BlinkMacSystemFont,"PingFang SC",Arial,sans-serif;font-size:16px;font-weight:700}.mcv-log-reference-save-v1.is-enabled:active{transform:scale(.985)}.mcv-log-reference-save-v1.is-enabled:focus-visible{outline:3px solid rgba(238,156,167,.72);outline-offset:3px}
       .mcv-page-content{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:auto!important;height:auto!important;min-height:0!important;margin:0 6%!important;padding:16px 0 calc(104px + env(safe-area-inset-bottom,0px))!important;display:flex!important;flex-direction:column!important;gap:16px!important;grid-template-rows:none!important;background:#f9f7f5!important}
       .mcv-mode-card,.mcv-level-module,.mcv-speed-module{width:100%!important;border-radius:24px!important}
       .mcv-control-panel{display:flex!important;flex-direction:column!important;height:auto!important;min-height:0!important;grid-template-rows:none!important;gap:16px!important;overflow:visible!important}
-      .mcv-level-module{order:1;flex:0 0 clamp(214px,27.6svh,248px)!important;height:clamp(214px,27.6svh,248px)!important;min-height:clamp(214px,27.6svh,248px)!important;border-radius:24px!important;background:#fff!important;box-shadow:0 10px 28px rgba(82,54,63,.055)!important}
-      .mcv-level-module .mcv-level-visual{inset:16px 24px!important}
+      .mcv-level-module{order:1;flex:0 0 clamp(310px,39svh,350px)!important;height:clamp(310px,39svh,350px)!important;min-height:clamp(310px,39svh,350px)!important;border-radius:24px!important;background:#fff!important;box-shadow:0 10px 28px rgba(82,54,63,.055)!important}
+      .mcv-level-module .mcv-level-visual{inset:112px 24px 16px!important}
       .mcv-level-module .reference-level-zone{bottom:16px!important}
       .mcv-mode-card,.mcv-speed-module{flex:0 0 auto!important;min-height:0!important}
       .mcv-speed-module{order:3}
@@ -53,7 +68,7 @@
       .mcv-control-actions::before{display:none!important}
       .mcv-control-actions .hold-button{min-width:0!important}
       .mcv-control-actions .pause-button{flex:0 0 56px!important}
-      .mcv-guide-invite,.mcv-guide-invite.cn-comfort-invite{display:none!important;position:static!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+      .mcv-guide-invite,.mcv-guide-invite.cn-comfort-invite{display:none!important;position:static!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}.mcv-guide-invite.is-calibration-prompt-visible{position:fixed!important;z-index:75!important;left:6%!important;right:6%!important;bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;width:auto!important;height:auto!important;min-height:0!important;margin:0!important;padding:28px 24px 24px!important;display:block!important;overflow:visible!important;border:1px solid #f1d9df!important;border-radius:28px!important;background:#fffdfa!important;box-shadow:0 18px 42px rgba(71,32,43,.18)!important}.mcv-trend-prompt-v1{text-align:center}.mcv-trend-prompt-v1 h3{margin:0;color:#6f1731;font-family:"Exposure[-10]",Georgia,serif;font-size:24px;line-height:1.25;font-weight:500}.mcv-trend-prompt-v1 p{margin:12px 0 0;color:#756a6e;font-size:13px;line-height:1.55}.mcv-trend-prompt-v1 .mcv-trend-actions-v1{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}.mcv-trend-prompt-v1 button{height:48px;border-radius:999px;font-size:13px;font-weight:800}.mcv-trend-start-v1{color:#fff;background:#8e0028;box-shadow:0 9px 18px rgba(119,5,35,.15)}.mcv-trend-later-v1{color:#756a6e;border:1px solid #e7dfe1;background:#fbf9f8}
       .cn-comfort-invite .mcv-invite-header{text-align:center!important}
       .cn-comfort-invite h3{text-align:center!important;margin:0!important}
       .cn-comfort-invite .mcv-invite-copy{text-align:center!important}
@@ -61,18 +76,33 @@
       .cn-comfort-invite .cn-guide-note{text-align:center!important;margin-top:12px!important}
       .cn-comfort-invite .mcv-invite-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important;margin-top:14px!important}
       .cn-comfort-invite .mcv-invite-actions>button{width:100%!important;min-width:0!important;height:44px!important}
-      .mcv-comfort-entry.mcv-comfort-entry-v4{order:2;position:relative!important;z-index:2!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;flex:0 0 116px!important;width:100%!important;max-width:none!important;height:116px!important;padding:14px 26px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 116px!important;grid-template-rows:1fr!important;align-items:stretch!important;gap:22px!important;border:1px solid rgba(238,218,224,.55)!important;border-radius:24px!important;background:#fff!important;box-shadow:0 10px 26px rgba(82,54,63,.06)!important;overflow:visible!important;box-sizing:border-box!important}
+      .mcv-level-module>.mcv-comfort-entry.mcv-comfort-entry-v4{position:absolute!important;z-index:6!important;inset:0 0 auto!important;width:auto!important;max-width:none!important;height:104px!important;padding:17px 24px 14px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;grid-template-rows:1fr!important;align-items:stretch!important;gap:18px!important;border:0!important;border-bottom:1px solid rgba(238,218,224,.76)!important;border-radius:24px 24px 0 0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;box-sizing:border-box!important}
       .mcv-comfort-entry.mcv-comfort-entry-v4[hidden]{display:none!important}
-      .mcv-comfort-placeholder.mcv-comfort-card-v4{order:2;position:relative!important;z-index:2!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;flex:0 0 116px!important;width:100%!important;max-width:none!important;height:116px!important;padding:14px 26px!important;border:1px solid rgba(238,218,224,.55)!important;border-radius:24px!important;background:#fff!important;box-shadow:0 10px 26px rgba(82,54,63,.06)!important;box-sizing:border-box!important;overflow:visible!important}
-      .mcv-comfort-placeholder-v4{display:grid!important;grid-template-columns:minmax(0,1fr) 116px!important;align-items:stretch!important;gap:22px!important}
+      .mcv-level-module>.mcv-comfort-placeholder.mcv-comfort-card-v4{position:absolute!important;z-index:6!important;inset:0 0 auto!important;width:auto!important;max-width:none!important;height:104px!important;padding:17px 24px 14px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;grid-template-rows:1fr!important;align-items:stretch!important;gap:18px!important;border:0!important;border-bottom:1px solid rgba(238,218,224,.76)!important;border-radius:24px 24px 0 0!important;background:transparent!important;box-shadow:none!important;box-sizing:border-box!important;overflow:visible!important}
+      .mcv-level-module>.mcv-comfort-placeholder-v4{display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;align-items:stretch!important;gap:18px!important}
       .mcv-comfort-placeholder.mcv-comfort-card-v4[hidden]{display:none!important}
-      .mcv-card-info-v5{min-width:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0}.mcv-card-title-row-v5{display:flex;align-items:center;gap:9px;min-width:0}.mcv-card-title-v5{color:#6f1731;font-size:19px;font-weight:800;letter-spacing:-.3px;line-height:1.1;white-space:nowrap}.mcv-card-status-v5{display:inline-flex;align-items:center;min-height:20px;padding:3px 9px;border-radius:999px;color:#7b1732;background:#f8e4e9;font-size:9.5px;font-weight:800;line-height:1;white-space:nowrap}.mcv-card-copy-v5{color:#5b3742;font-size:12px;font-weight:750;white-space:normal;line-height:1.25}.mcv-card-meta-v5{color:#94878c;font-size:9.5px;font-weight:600;line-height:1.2}.mcv-card-actions-v5{display:flex;min-width:0;height:100%;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;padding-left:7px;border-left:1px solid rgba(130,75,91,.10)}.mcv-card-primary-v5{width:108px;min-width:108px;min-height:42px;padding:0 8px;border-radius:15px;color:#fff;background:#90002b;font-size:10.5px;font-weight:800;line-height:1.2;white-space:normal}.mcv-card-secondary-v5{width:108px;min-width:108px;min-height:24px;padding:0;color:#821632;background:transparent;font-size:10px;font-weight:800;text-align:center}.mcv-card-primary-v5:active,.mcv-card-secondary-v5:active{transform:scale(.97)}
+      .mcv-card-info-v5{min-width:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0}.mcv-card-title-row-v5{display:flex;align-items:center;gap:9px;min-width:0}.mcv-card-title-v5{color:#6f1731;font-size:19px;font-weight:800;letter-spacing:-.3px;line-height:1.1;white-space:nowrap}.mcv-card-status-v5{display:none!important}.mcv-card-copy-v5{color:#5b3742;font-size:12px;font-weight:750;white-space:normal;line-height:1.25}.mcv-card-meta-v5{color:#94878c;font-size:9.5px;font-weight:600;line-height:1.2}.mcv-card-actions-v5{display:flex;min-width:0;height:100%;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;padding-left:7px;border-left:1px solid rgba(130,75,91,.10)}.mcv-card-primary-v5{width:108px;min-width:108px;min-height:42px;padding:0 8px;border-radius:15px;color:#fff;background:#90002b;font-size:10.5px;font-weight:800;line-height:1.2;white-space:normal}.mcv-card-secondary-v5{width:108px;min-width:108px;min-height:24px;padding:0;color:#821632;background:transparent;font-size:10px;font-weight:800;text-align:center}.mcv-card-primary-v5:active,.mcv-card-secondary-v5:active{transform:scale(.97)}
       .mcv-comfort-card-v4.is-bubble-active{z-index:35!important}.mcv-bottom-shell.is-bubble-active{z-index:41!important}.mcv-comfort-bubble-v5{position:absolute;z-index:42;left:6%;right:6%;bottom:calc(100% + 10px);height:62px;padding:9px 46px 9px 34px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr 1fr;align-items:center;column-gap:9px;border:1px solid #edd2da;border-radius:18px;background:#fffaf7;box-shadow:0 10px 24px rgba(73,39,50,.13);box-sizing:border-box}.mcv-comfort-bubble-v5::before{content:"";position:absolute;left:15px;top:50%;width:8px;height:8px;border-radius:50%;background:#9d0632;transform:translateY(-50%);animation:mcv-comfort-pulse-v5 1.8s ease-in-out infinite}.mcv-bubble-title-v5{grid-column:1;grid-row:1;color:#6d2438;font-size:10.5px;font-weight:800;line-height:1.2}.mcv-bubble-copy-v5{grid-column:1;grid-row:2;color:#8d7e83;font-size:9.5px;line-height:1.2}.mcv-bubble-start-v5{grid-column:2;grid-row:1/3;min-width:44px;min-height:44px;color:#8e0028;background:transparent;font-size:11px;font-weight:800}.mcv-bubble-close-v5{position:absolute;right:6px;top:5px;width:28px;height:28px;border-radius:50%;color:#806b72;background:transparent;font-size:17px}.mcv-comfort-bubble-v5.is-leaving{opacity:0;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease}@keyframes mcv-comfort-pulse-v5{0%,100%{box-shadow:0 0 0 0 rgba(157,6,50,.22)}50%{box-shadow:0 0 0 6px rgba(157,6,50,0)}}
       .mcv-card-primary-v5:focus-visible,.mcv-card-secondary-v5:focus-visible,.mcv-bubble-start-v5:focus-visible,.mcv-bubble-close-v5:focus-visible{outline:2px solid #8e0028;outline-offset:2px}
-      @media(max-width:360px){.mcv-comfort-entry.mcv-comfort-entry-v4,.mcv-comfort-placeholder.mcv-comfort-card-v4{grid-template-columns:minmax(0,1fr) 92px!important;padding:14px 16px!important;gap:14px!important}.mcv-card-copy-v5{font-size:11px}.mcv-card-primary-v5,.mcv-card-secondary-v5{width:92px;min-width:92px}.mcv-card-primary-v5{padding:0 7px}.mcv-card-actions-v5{padding-left:0;border-left:0}}
+      @media(max-width:360px){.mcv-level-module>.mcv-comfort-entry.mcv-comfort-entry-v4,.mcv-level-module>.mcv-comfort-placeholder.mcv-comfort-card-v4{grid-template-columns:minmax(0,1fr) 92px!important;padding:14px 16px!important;gap:14px!important}.mcv-card-copy-v5{font-size:11px}.mcv-card-primary-v5,.mcv-card-secondary-v5{width:92px;min-width:92px}.mcv-card-primary-v5{padding:0 7px}.mcv-card-actions-v5{padding-left:0;border-left:0}}
       @media (prefers-reduced-motion:reduce){.mcv-card-primary-v5,.mcv-card-secondary-v5,.mcv-comfort-bubble-v5{transition:none!important}.mcv-comfort-bubble-v5::before{animation:none!important}}
     `;
     doc.head.appendChild(surfaceStyle);
+    const comfortFeedbackStyle = doc.createElement("style");
+    comfortFeedbackStyle.textContent = `
+      .mcv-card-primary-v5{box-shadow:0 7px 15px rgba(142,0,40,.14);transition:transform .18s ease,filter .18s ease,background .22s ease}
+      .mcv-card-actions-v5.is-ramping{gap:2px}.mcv-card-actions-v5.is-ramping .mcv-card-primary-v5{min-height:34px;background:#9a173a}
+      .mcv-card-tertiary-v5{width:108px;min-width:108px;min-height:19px;padding:0;color:#9b7781;background:transparent;font-size:9px;font-weight:700;text-align:center}
+      .mcv-card-status-v5.is-ramping{color:#8e0028;background:#f9e8ec}.mcv-card-status-v5.is-active{color:#7c1733;background:#f5dce3}
+      .mcv-comfort-toast-v5{position:fixed;z-index:80;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 48px),350px);padding:11px 16px;border:1px solid rgba(132,61,81,.12);border-radius:18px;color:#653444;background:rgba(255,250,248,.96);box-shadow:0 10px 26px rgba(82,38,53,.13);font-size:11px;font-weight:700;line-height:1.45;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,10px);transition:opacity .24s ease,transform .24s ease}.mcv-comfort-toast-v5.is-visible{opacity:1;transform:translate(-50%,0)}
+      .mcv-mode-card{order:0!important;flex:0 0 116px!important;height:116px!important;min-height:116px!important;padding:18px 28px!important;border:1px solid #f2d5db!important;border-radius:24px!important;background:#fff1f3!important;box-shadow:none!important;color:#531326!important}.mcv-rhythm-head-v6{display:flex;align-items:center;justify-content:space-between;height:25px}.mcv-rhythm-head-v6 strong{font-size:16px!important;font-weight:800!important;letter-spacing:-.15px}.mcv-rhythm-more-v6{display:grid;place-items:center;width:28px;height:28px;margin-right:-7px;border-radius:50%;color:#6e1732;background:transparent;font-size:26px;font-weight:400;line-height:1}.mcv-rhythm-options-v6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px}.mcv-rhythm-options-v6 button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;height:48px;padding:0 8px;border-radius:999px;color:#a49aa0;background:rgba(255,255,255,.72);box-shadow:0 4px 10px rgba(96,47,61,.08);font-size:11px;font-weight:750;white-space:nowrap;transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}.mcv-rhythm-icon-v6{width:19px;height:19px;flex:0 0 auto;fill:none;stroke:#c75770;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.mcv-expression-icon-v6{stroke-width:2.7}.mcv-rhythm-options-v6 button.is-active{color:#fff;background:linear-gradient(135deg,#8e0028,#c65771);box-shadow:0 7px 15px rgba(142,0,40,.17)}.mcv-rhythm-options-v6 button.is-active .mcv-rhythm-icon-v6{stroke:#fff}.mcv-rhythm-options-v6 button:active{transform:scale(.97)}
+      @media(max-width:360px){.mcv-card-tertiary-v5{width:92px;min-width:92px}}
+      @media(prefers-reduced-motion:reduce){.mcv-comfort-toast-v5,.mcv-card-primary-v5{transition:none!important}}
+    `;
+    doc.head.appendChild(comfortFeedbackStyle);
+    comfortFeedbackStyle.textContent += `
+      .mcv-phase-prompt-v6{position:fixed;z-index:86;left:24px;right:24px;bottom:calc(88px + env(safe-area-inset-bottom,0px));padding:24px 20px 18px;border:1px solid #f0d6dc;border-radius:28px;background:#fffdfa;box-shadow:0 20px 48px rgba(62,0,16,.20);animation:mcv-phase-prompt-in-v6 .22s ease-out}.mcv-phase-prompt-v6 h3{margin:0;color:#3e0010;font-family:"Exposure[-10]",Georgia,serif;font-size:24px;font-weight:500;line-height:1.25;text-align:center}.mcv-phase-prompt-v6 p{margin:9px 0 0;color:#75696e;font-size:12px;line-height:1.55;text-align:center}.mcv-phase-prompt-actions-v6{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:19px}.mcv-phase-prompt-actions-v6 button{min-height:46px;border-radius:999px;font-size:12px;font-weight:800}.mcv-phase-prompt-primary-v6{color:#fff;background:#770523;box-shadow:0 7px 16px rgba(119,5,35,.16)}.mcv-phase-prompt-secondary-v6{color:#75696e;border:1px solid #e4e2e3;background:#f9f7f5}.mcv-phase-prompt-actions-v6.is-single{grid-template-columns:1fr}.mcv-phase-prompt-close-v6{position:absolute;top:4px;right:5px;width:38px;height:38px;border-radius:50%;color:#806b72;background:transparent;font-size:22px;line-height:1}@keyframes mcv-phase-prompt-in-v6{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    `;
     // Keep the control screen free of transient session prompts. These state
     // changes remain functional; only the three demo notifications are muted.
     if (typeof win.showToast === "function" && !win.showToast.__comfortPromptsMuted) {
@@ -165,10 +195,12 @@ function enhancePrecheck() {
     event.stopImmediatePropagation();
     // Mount the next sheet above the current one first, then remove the old
     // sheet. This keeps the dimmed control page from flashing between steps.
-    if (typeof win.__showCalibrationV4 === "function") {
-      win.__showCalibrationV4({ seamless: true });
-      page.remove();
-    }
+    // `showCalibration` is in this install scope and is hoisted, whereas the
+    // exported window hook can briefly be unavailable while the iframe boots.
+    // Calling the local function makes the primary action reliable on the
+    // first tap as well as subsequent taps.
+    showCalibration({ seamless: true });
+    page.remove();
   }, true);
   scroll.addEventListener("scroll", () => requestAnimationFrame(syncDots), { passive: true });
 }
@@ -180,7 +212,7 @@ function enhancePrecheck() {
       const header = doc.createElement("section");
       header.className = "mcv-native-head-v4";
       header.setAttribute("aria-label", "Pump control header");
-      header.innerHTML = `<nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-help-v4" type="button" aria-label="Help">?</button><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-device-v4"><img src="../assets/pump-product.png" alt="V3 breast pump"></div>`;
+      header.innerHTML = `<nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-message-canvas-v7" aria-label="消息提示区域"></div><div class="mcv-native-device-v4"><div class="mcv-native-pumps-v4" role="img" aria-label="Dual breast pumps"><span class="mcv-native-pump-v4 mcv-native-pump-v4--left"></span><span class="mcv-native-pump-v4 mcv-native-pump-v4--right"></span></div><div class="mcv-native-pump-stats-v6" aria-label="设备状态"><span><em>02:50</em><small>▣ 99%</small></span><span><em>01:33</em><small>▣ 99%</small></span></div></div>`;
       page.prepend(header);
     }
     // The prototype now opens directly on Pump Control. Keep the old dashboard
@@ -193,6 +225,66 @@ function enhancePrecheck() {
     }
     openPumpControlAsInitialView();
     enhanceNativeControlHeader();
+
+    function setHeaderMessage(message = "") {
+      const canvas = doc.querySelector(".mcv-native-message-canvas-v7");
+      if (!canvas) return;
+      canvas.textContent = message;
+    }
+    setHeaderMessage("在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。");
+
+    function enforceContinuousHeaderBackground() {
+      const nativeHeader = doc.querySelector(".mcv-native-head-v4");
+      const nativeNav = doc.querySelector(".mcv-native-nav-v4");
+      const background = "radial-gradient(ellipse 82% 66% at 50% 52%,rgba(255,237,174,.86) 0%,rgba(255,237,174,.52) 34%,rgba(255,229,203,.18) 62%,transparent 76%),linear-gradient(180deg,#f8d7d7 0%,#fce4d5 23%,#fff0c7 48%,#fce8df 71%,#f9f7f5 100%)";
+      nativeHeader?.style.setProperty("background", background, "important");
+      nativeNav?.style.setProperty("background", "transparent", "important");
+      nativeNav?.style.setProperty("backdrop-filter", "none", "important");
+    }
+    enforceContinuousHeaderBackground();
+    win.setTimeout(enforceContinuousHeaderBackground, 0);
+    win.setTimeout(enforceContinuousHeaderBackground, 160);
+
+    function enhanceRhythmCard() {
+      const card = doc.querySelector(".mcv-mode-card");
+      if (!card || card.dataset.rhythmCardV6 === "true") return;
+      card.dataset.rhythmCardV6 = "true";
+      const sourceLabel = card.querySelector("#modeLabel");
+      if (sourceLabel) sourceLabel.setAttribute("aria-hidden", "true");
+      const heartIcon = `<svg class="mcv-rhythm-icon-v6" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.9a5.2 5.2 0 0 0-7.4 0L12 6.3l-1.4-1.4a5.2 5.2 0 0 0-7.4 7.4L12 21l8.8-8.7a5.2 5.2 0 0 0 0-7.4Z"/></svg>`;
+      const expressionIcon = `<svg class="mcv-rhythm-icon-v6 mcv-expression-icon-v6" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.1 3.2C9.4 6.5 4.2 10.1 4.2 15.3a7.8 7.8 0 0 0 15.6 0c0-3.4-2.2-6.5-5.2-9.6"/><path d="M9.4 17.5c1.8.9 4.2.2 5.1-1.6.7-1.4.4-3.2-.8-4.2.1 2.1-1.1 3.8-3.3 4.1"/></svg>`;
+      const mixedIcon = `<svg class="mcv-rhythm-icon-v6" viewBox="0 0 28 24" aria-hidden="true"><path d="M18.3 4.9a5.2 5.2 0 0 0-7.4 0L9.5 6.3 8.1 4.9a5.2 5.2 0 0 0-7.4 7.4L9.5 21l8.8-8.7a5.2 5.2 0 0 0 0-7.4Z"/><path d="M21.3 6.6c3 1.2 4.4 4.8 2.6 7.6-.8 1.2-1.8 2-3.1 2.5"/></svg>`;
+      card.innerHTML = `<div class="mcv-rhythm-head-v6"><strong>Stimulation</strong><button type="button" class="mcv-rhythm-more-v6" aria-label="选择韵律">›</button></div><div class="mcv-rhythm-options-v6" role="group" aria-label="吸乳韵律"><button type="button" class="is-active" data-rhythm="Stimulation">${heartIcon}Stimulation</button><button type="button" data-rhythm="Expression">${expressionIcon}Expression</button><button type="button" data-rhythm="Mixed">${mixedIcon}Mixed</button></div>`;
+      const title = card.querySelector(".mcv-rhythm-head-v6 strong");
+      const setSelectedRhythm = rhythm => {
+        selectedRhythm = rhythm;
+        title.textContent = rhythm;
+        card.querySelectorAll("[data-rhythm]").forEach(item => item.classList.toggle("is-active", item.dataset.rhythm === rhythm));
+        if (rhythm !== "Expression") expressionGuideDeferred = false;
+        setHeaderMessage(rhythm === "Stimulation" ? "在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。" : "");
+        syncComfortCards();
+      };
+      win.__setSelectedRhythmV6 = setSelectedRhythm;
+      card.querySelectorAll("[data-rhythm]").forEach(button => {
+        button.addEventListener("click", () => {
+          setSelectedRhythm(button.dataset.rhythm);
+          if (selectedRhythm === "Expression" && startPumpingButton?.hidden) win.__enterExpressionManuallyV6?.();
+          if (selectedRhythm !== "Expression") {
+            win.clearTimeout(comfortBubbleDemoTimer);
+            if (!calibrationInviteShownThisSession) hideCalibrationInvite();
+          } else if (startPumpingButton?.hidden && !calibrationInviteShownThisSession) {
+            // A running session may switch into Expression manually. Treat
+            // that transition exactly like starting a session in Expression.
+            comfortBubbleDemoTimer = win.setTimeout(() => {
+              if (trendPromptIsAvailable()) presentTrendPrompt();
+              else showPhasePrompt("Expression");
+            }, 300);
+          }
+          if (typeof win.showToast === "function") win.showToast(`${button.dataset.rhythm} rhythm selected`);
+        });
+      });
+    }
+    enhanceRhythmCard();
 
     // There is no longer a dashboard destination in this prototype. Retain the
     // familiar back affordance without allowing it to reveal the removed page.
@@ -209,12 +301,45 @@ function enhancePrecheck() {
 
     function savedComfortProfile() {
       const value = safeRead(PROFILE_KEY);
-      return value && Number.isFinite(value.leftLevel) && Number.isFinite(value.rightLevel) ? value : null;
+      if (!value || !Number.isFinite(value.leftLevel) || !Number.isFinite(value.rightLevel)) return null;
+      const normalized = {
+        ...value,
+        leftLevel: Math.max(1, Math.min(MAX_LEVEL, value.leftLevel)),
+        rightLevel: Math.max(1, Math.min(MAX_LEVEL, value.rightLevel))
+      };
+      if (normalized.leftLevel !== value.leftLevel || normalized.rightLevel !== value.rightLevel) safeWrite(PROFILE_KEY, normalized);
+      return normalized;
     }
 
     function comfortDraft() {
       const value = safeRead(DRAFT_KEY);
       return value && (value.leftDone || value.rightDone || value.side) ? value : null;
+    }
+
+    let comfortRamp = null;
+    let comfortToastTimer = 0;
+
+    function showComfortToast(message, duration = 2400) {
+      let toast = doc.querySelector(".mcv-comfort-toast-v5");
+      if (!toast) {
+        toast = doc.createElement("div");
+        toast.className = "mcv-comfort-toast-v5";
+        toast.setAttribute("role", "status");
+        toast.setAttribute("aria-live", "polite");
+        doc.body.appendChild(toast);
+      }
+      win.clearTimeout(comfortToastTimer);
+      toast.textContent = message;
+      toast.classList.add("is-visible");
+      comfortToastTimer = win.setTimeout(() => toast.classList.remove("is-visible"), duration);
+    }
+
+    function stopComfortRamp(reason) {
+      if (!comfortRamp) return;
+      win.clearTimeout(comfortRamp.timer);
+      comfortRamp = null;
+      syncComfortCards();
+      if (reason) showComfortToast(reason, 1500);
     }
 
     function openComfortLearning() {
@@ -225,15 +350,40 @@ function enhancePrecheck() {
 
     function applySavedComfort() {
       const profile = savedComfortProfile();
-      if (!profile) return;
-      setPumpLevel("left", Math.max(1, Math.min(MAX_LEVEL, profile.leftLevel)));
-      setPumpLevel("right", Math.max(1, Math.min(MAX_LEVEL, profile.rightLevel)));
-      buzz([8, 20, 8]);
-      if (typeof win.showToast === "function") win.showToast("已恢复舒适档位", 1500);
-      win.setTimeout(syncComfortCards, 0);
+      const current = { left: readLevel("left"), right: readLevel("right") };
+      const targets = {
+        left: Math.max(current.left, Math.max(1, Math.min(MAX_LEVEL, profile?.leftLevel || 3))),
+        right: Math.max(current.right, Math.max(1, Math.min(MAX_LEVEL, profile?.rightLevel || 3)))
+      };
+      stopComfortRamp();
+      const start = { ...current };
+      comfortRamp = { targets, current: { ...start }, paused: false, timer: 0 };
+      showComfortToast(`正在从 L${start.left} / R${start.right} 平缓升至 L${targets.left} / R${targets.right}，可随时手动调整`);
+      syncComfortCards();
+      const step = () => {
+        if (!comfortRamp || comfortRamp.paused) return;
+        let changed = false;
+        ["left", "right"].forEach(side => {
+          if (comfortRamp.current[side] < comfortRamp.targets[side]) {
+            comfortRamp.current[side] += 1;
+            setPumpLevel(side, comfortRamp.current[side]);
+            changed = true;
+          }
+        });
+        syncComfortCards();
+        if (changed) { comfortRamp.timer = win.setTimeout(step, 2000); return; }
+        const completedTargets = comfortRamp.targets;
+        safeWrite(PROFILE_KEY, { ...(savedComfortProfile() || {}), leftLevel:completedTargets.left, rightLevel:completedTargets.right, status:"active", lastValidatedAt:new Date().toISOString(), version:2 });
+        comfortRamp = null;
+        buzz([8, 20, 8]);
+        syncComfortCards();
+        showComfortToast("已到达舒适档位", 1500);
+      };
+      comfortRamp.timer = win.setTimeout(step, 2000);
     }
 
     function comfortState() {
+      if (comfortRamp) return { name:comfortRamp.paused ? "已暂停" : "升档中", kind:"ramping", ramp:comfortRamp };
       const profile = savedComfortProfile();
       const draft = comfortDraft();
       if (draft && !(draft.leftDone && draft.rightDone)) return { name:"未完成", kind:"incomplete", draft };
@@ -268,17 +418,62 @@ function enhancePrecheck() {
       const meta = card.querySelector(".mcv-card-meta-v5");
       const actions = card.querySelector(".mcv-card-actions-v5");
       status.textContent = state.name;
+      status.classList.toggle("is-ramping", state.kind === "ramping");
+      status.classList.toggle("is-active", state.kind === "using");
       actions.replaceChildren();
+      actions.classList.toggle("is-ramping", state.kind === "ramping");
       let primary = "", secondary = "", primaryAction = null, secondaryAction = null;
-      if (state.kind === "unset") {
+      const sessionIsActive = doc.getElementById("startPumping")?.hidden === true;
+      if (sessionIsActive && selectedRhythm === "Stimulation") {
+        copy.textContent = "吸乳阶段即将开始";
+        meta.textContent = "感觉舒适时，可每次上调 1 档。";
+      } else if (sessionIsActive && selectedRhythm === "Expression" && !expressionGuideDeferred) {
+        status.textContent = "吸乳阶段";
+        copy.textContent = "已进入吸乳阶段";
+        meta.textContent = "可花约 1 分钟，找到左右侧最舒服的吸力。";
+        primary = "开始校准"; primaryAction = () => showCalibration();
+        secondary = "稍后再说"; secondaryAction = () => { expressionGuideDeferred = true; syncComfortCards(); };
+      } else if (state.kind === "unset") {
         copy.textContent = "分别找到左右两侧舒服的吸力"; meta.textContent = "约需1分钟";
-        primary = "开始设置"; primaryAction = openComfortLearning;
+        primary = "舒适启动"; primaryAction = applySavedComfort;
+      } else if (state.kind === "ramping") {
+        const { current, targets, paused } = state.ramp;
+        copy.textContent = "正在平缓升至舒适档位";
+        meta.textContent = `L${current.left} / R${current.right} → L${targets.left} / R${targets.right}`;
+        primary = paused ? "继续升档" : "暂停";
+        primaryAction = () => {
+          if (!comfortRamp) return;
+          comfortRamp.paused = !comfortRamp.paused;
+          if (!comfortRamp.paused) {
+            const resume = () => {
+              if (!comfortRamp || comfortRamp.paused) return;
+              let changed = false;
+              ["left", "right"].forEach(side => {
+                if (comfortRamp.current[side] < comfortRamp.targets[side]) { comfortRamp.current[side] += 1; setPumpLevel(side, comfortRamp.current[side]); changed = true; }
+              });
+              syncComfortCards();
+              if (changed) comfortRamp.timer = win.setTimeout(resume, 2000);
+              else { const completedTargets = comfortRamp.targets; safeWrite(PROFILE_KEY, { ...(savedComfortProfile() || {}), leftLevel:completedTargets.left, rightLevel:completedTargets.right, status:"active", lastValidatedAt:new Date().toISOString(), version:2 }); comfortRamp = null; buzz([8,20,8]); syncComfortCards(); showComfortToast("已到达舒适档位", 1500); }
+            };
+            comfortRamp.timer = win.setTimeout(resume, 2000);
+          }
+          syncComfortCards();
+        };
+        secondary = "降一档";
+        secondaryAction = () => {
+          if (!comfortRamp) return;
+          ["left", "right"].forEach(side => {
+            comfortRamp.current[side] = Math.max(1, comfortRamp.current[side] - 1);
+            setPumpLevel(side, comfortRamp.current[side]);
+          });
+          syncComfortCards();
+        };
       } else if (state.kind === "incomplete") {
         copy.textContent = draftSummary(state.draft); meta.textContent = "进度已自动保存";
         primary = "继续设置"; primaryAction = showCalibration;
       } else if (state.kind === "unapplied") {
         copy.textContent = `已保存  L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`; meta.textContent = "当前档位与舒适基准不同";
-        primary = "恢复舒适档位"; primaryAction = applySavedComfort; secondary = "重新设置"; secondaryAction = openComfortLearning;
+        primary = "舒适启动"; primaryAction = applySavedComfort; secondary = "重新设置"; secondaryAction = openComfortLearning;
       } else if (state.kind === "using") {
         copy.textContent = `L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`; meta.textContent = "当前正在使用保存档位";
         secondary = "重新设置"; secondaryAction = openComfortLearning;
@@ -293,6 +488,10 @@ function enhancePrecheck() {
       if (primary) {
         const button = doc.createElement("button"); button.type = "button"; button.className = "mcv-card-primary-v5"; button.textContent = primary; button.setAttribute("aria-label", primary);
         button.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); primaryAction(); }); actions.appendChild(button);
+      }
+      if (state.kind === "ramping") {
+        const cancel = doc.createElement("button"); cancel.type = "button"; cancel.className = "mcv-card-tertiary-v5"; cancel.textContent = "取消自动升档"; cancel.setAttribute("aria-label", "取消自动升档");
+        cancel.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); stopComfortRamp("已取消自动升档"); }); actions.appendChild(cancel);
       }
     }
 
@@ -310,6 +509,17 @@ function enhancePrecheck() {
 
     enhanceComfortCards();
 
+    // A direct adjustment on either underlying level control always takes
+    // precedence over the automation, without changing the control itself.
+    ["leftLevelChip", "rightLevelChip", "leftLevelZone", "rightLevelZone"].forEach(id => {
+      const control = doc.getElementById(id);
+      if (!control) return;
+      control.addEventListener("pointerdown", () => stopComfortRamp("已切换为手动调整"), true);
+      control.addEventListener("keydown", event => {
+        if (event.key === "ArrowUp" || event.key === "ArrowDown") stopComfortRamp("已切换为手动调整");
+      }, true);
+    });
+
     // Capture the level module before inserting new content below it.  Its
     // original visual height is a fixed design constraint, never a spacer.
     let originalLevelModuleHeight = 0;
@@ -320,21 +530,20 @@ function enhancePrecheck() {
       if (height) originalLevelModuleHeight = height;
     }
 
-    function splitComfortCardFromLevelModule() {
-      const panel = doc.querySelector(".mcv-control-panel");
+    function mergeComfortCardIntoLevelModule() {
       const levelModule = doc.querySelector(".mcv-level-module");
       const entry = doc.getElementById("comfortEntry");
       const placeholder = doc.getElementById("comfortPlaceholder");
-      if (!panel || !levelModule || !entry || !placeholder || panel.dataset.comfortCardsSplit === "true") return;
-      panel.dataset.comfortCardsSplit = "true";
+      if (!levelModule || !entry || !placeholder || levelModule.dataset.comfortCardsMerged === "true") return;
+      levelModule.dataset.comfortCardsMerged = "true";
       entry.classList.add("mcv-comfort-card-v4");
       placeholder.classList.add("mcv-comfort-card-v4");
-      levelModule.insertAdjacentElement("afterend", placeholder);
-      levelModule.insertAdjacentElement("afterend", entry);
+      levelModule.insertAdjacentElement("afterbegin", entry);
+      levelModule.insertAdjacentElement("afterbegin", placeholder);
     }
 
     rememberOriginalLevelModuleHeight();
-    splitComfortCardFromLevelModule();
+    mergeComfortCardIntoLevelModule();
 
     // Keep every control in the same vertical flow.  The phone remains a
     // fixed-height viewport, while its content scrolls naturally below it.
@@ -356,6 +565,16 @@ function enhancePrecheck() {
       if (placeholder) placeholder.hidden = true;
       syncComfortCards();
     }
+
+    function hideComfortCards() {
+      // The comfort card is a persistent session affordance. Base-flow state
+      // changes must not remove it, including while calibration is open.
+      retainComfortCardDuringSession();
+    }
+
+    // Keep the card visible from the initial control screen onward. The
+    // observer below restores it if the underlying prototype toggles it.
+    retainComfortCardDuringSession();
 
     // The level panel must keep its idle height while pumping starts.  The
     // running-state layout changes below it must never stretch the sliders.
@@ -402,6 +621,32 @@ function enhancePrecheck() {
       const finish = () => { bubble.remove(); anchor?.classList.remove("is-bubble-active"); };
       if (immediate || win.matchMedia("(prefers-reduced-motion: reduce)").matches) finish();
       else { bubble.classList.add("is-leaving"); win.setTimeout(finish, 180); }
+    }
+
+    function removePhasePrompt() {
+      doc.querySelector(".mcv-phase-prompt-v6")?.remove();
+    }
+
+    function showPhasePrompt(phase = selectedRhythm) {
+      const isStimulation = phase === "Stimulation";
+      if (isStimulation) {
+        removePhasePrompt();
+        setHeaderMessage("在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。");
+        return;
+      }
+      if (trendPromptIsAvailable() || doc.getElementById("startPumping")?.hidden !== true) return;
+      removePhasePrompt();
+      const prompt = doc.createElement("aside");
+      prompt.className = "mcv-phase-prompt-v6";
+      prompt.setAttribute("role", "dialog");
+      prompt.setAttribute("aria-modal", "false");
+      prompt.setAttribute("aria-label", "吸乳阶段提示");
+      prompt.innerHTML = `<button type="button" class="mcv-phase-prompt-close-v6" aria-label="关闭提示">×</button><h3>已进入吸乳阶段</h3><p>现在可以花约 1 分钟，分别找到左右侧最舒服的吸力。</p><div class="mcv-phase-prompt-actions-v6"><button type="button" class="mcv-phase-prompt-primary-v6">开始校准</button><button type="button" class="mcv-phase-prompt-secondary-v6">稍后再说</button></div>`;
+      doc.body.appendChild(prompt);
+      const close = () => removePhasePrompt();
+      prompt.querySelector(".mcv-phase-prompt-close-v6").addEventListener("click", close);
+      prompt.querySelector(".mcv-phase-prompt-primary-v6").addEventListener("click", () => { close(); showCalibration(); });
+      prompt.querySelector(".mcv-phase-prompt-secondary-v6").addEventListener("click", () => { expressionGuideDeferred = true; close(); syncComfortCards(); });
     }
 
     function comfortPromptBlocked() {
@@ -452,22 +697,244 @@ function enhancePrecheck() {
       }, 3000);
     }
 
+    function readPumpingHistory() {
+      const history = safeRead(PUMPING_HISTORY_KEY);
+      return Array.isArray(history) ? history.filter(item => Number.isFinite(item?.total) && item.total > 0).slice(-12) : [];
+    }
+
+    function recordPumpingSession(amounts) {
+      const left = Math.round(Number(amounts.left) || 0);
+      const right = Math.round(Number(amounts.right) || 0);
+      const total = left + right;
+      // A session is valid only when it contains a positive, saved volume.
+      if (!total) return;
+      const history = readPumpingHistory();
+      history.push({ left, right, total, savedAt: new Date().toISOString() });
+      safeWrite(PUMPING_HISTORY_KEY, history.slice(-12));
+    }
+
+    function hasThreeDecliningPumpingRecords() {
+      const recent = readPumpingHistory().slice(-3);
+      return recent.length === 3 && recent[0].total > recent[1].total && recent[1].total > recent[2].total;
+    }
+
+    function decliningTrendSignature() {
+      return readPumpingHistory().slice(-3).map(item => `${item.total}:${item.savedAt}`).join("|");
+    }
+
+    function trendPromptIsAvailable() {
+      const state = safeRead(TREND_PROMPT_KEY);
+      const deferredAt = Number(state?.deferredAt || 0);
+      // Respect "Later" for seven days; the underlying trend is never shown.
+      return hasThreeDecliningPumpingRecords() &&
+        Date.now() - deferredAt > 7 * 24 * 60 * 60 * 1000 &&
+        state?.shownFor !== decliningTrendSignature();
+    }
+
+    function presentTrendPrompt() {
+      const invite = doc.getElementById("guideInvite");
+      if (!invite || !trendPromptIsAvailable()) return;
+      calibrationInviteShownThisSession = true;
+      invite.classList.add("is-calibration-prompt-visible");
+      invite.hidden = false;
+      invite.innerHTML = `<section class="mcv-trend-prompt-v1" aria-label="舒适档位建议"><h3>近期吸乳体验是否有变化？</h3><p>如果吸力感受和以前不同，<br>可以尝试微调舒适档位。</p><div class="mcv-trend-actions-v1"><button class="mcv-trend-start-v1" type="button">开始校准</button><button class="mcv-trend-later-v1" type="button">稍后再说</button></div></section>`;
+      invite.querySelector(".mcv-trend-start-v1").addEventListener("click", () => {
+        safeWrite(TREND_PROMPT_KEY, { startedAt: Date.now(), shownFor: decliningTrendSignature() });
+        hideCalibrationInvite();
+        showCalibration();
+      });
+      invite.querySelector(".mcv-trend-later-v1").addEventListener("click", () => {
+        safeWrite(TREND_PROMPT_KEY, { deferredAt: Date.now() });
+        hideCalibrationInvite();
+      });
+    }
+
     function armDemoComfortBubble() {
       // Capture the untouched control-panel height in the click capture phase,
       // before the base Start handler changes the running-state layout.
       lockOriginalLevelModuleHeight();
-      // Do this before the original Start handler runs so the card never
-      // disappears during the Stimulation → Expression transition.
-      retainComfortCardDuringSession();
-      win.requestAnimationFrame(retainComfortCardDuringSession);
-      win.setTimeout(retainComfortCardDuringSession, 80);
       win.clearTimeout(comfortBubbleDemoTimer);
       comfortBubbleDismissed = false;
+      expressionGuideDeferred = false;
       removeComfortBubble(true);
+      removePhasePrompt();
+      syncComfortCards();
+      if (!calibrationInviteShownThisSession) hideCalibrationInvite();
+      const phaseAtStart = selectedRhythm;
       comfortBubbleDemoTimer = win.setTimeout(() => {
-        syncComfortCards();
-        showComfortBubble(true);
+        if (phaseAtStart === "Expression") win.__enterExpressionManuallyV6?.();
+        if (trendPromptIsAvailable()) presentTrendPrompt();
+        else showPhasePrompt(phaseAtStart);
+      }, 550);
+    }
+
+    function scheduleExpressionComfortCard(showGuidanceHint) {
+      if (!trendPromptIsAvailable()) return;
+      win.clearTimeout(comfortBubbleDemoTimer);
+      comfortBubbleDemoTimer = win.setTimeout(() => {
+        // The base handler has switched the Start button away only while the
+        // session is genuinely active. This prevents an invitation appearing after
+        // an interrupted tap or after changing away from Expression.
+        if (!startPumpingButton?.hidden) return;
+        presentTrendPrompt();
       }, 3000);
+    }
+
+    function hideCalibrationInvite() {
+      const invite = doc.getElementById("guideInvite");
+      if (invite) { invite.classList.remove("is-calibration-prompt-visible"); invite.hidden = true; }
+    }
+
+    function showPumpingLog() {
+      if (doc.querySelector(".mcv-log-layer-v1")) return;
+      const layer = doc.createElement("section");
+      layer.className = "mcv-log-layer-v1";
+      layer.setAttribute("role", "dialog");
+      layer.setAttribute("aria-modal", "true");
+      layer.setAttribute("aria-label", "记录本次奶量");
+      layer.innerHTML = `<img class="mcv-log-full-reference-v1" src="../assets/pumping-log-zero-knobless-v3.png" alt="记录奶量"><button class="mcv-log-reference-action-v1 mcv-log-reference-close-v1" type="button" aria-label="关闭记录奶量"></button><div class="mcv-log-fill-clip-v1" data-log-fill="left"><span class="mcv-log-fill-v1"></span></div><div class="mcv-log-fill-clip-v1" data-log-fill="right"><span class="mcv-log-fill-v1"></span></div><div class="mcv-log-drag-v1" data-log-drag="left" role="slider" tabindex="0" aria-label="左侧奶量" aria-valuemin="0" aria-valuemax="300"></div><div class="mcv-log-drag-v1" data-log-drag="right" role="slider" tabindex="0" aria-label="右侧奶量" aria-valuemin="0" aria-valuemax="300"></div><output class="mcv-log-value-v1" data-log-output="left">0<small>ml</small></output><output class="mcv-log-value-v1" data-log-output="right">0<small>ml</small></output><button class="mcv-log-reference-action-v1 mcv-log-reference-save-v1" type="button" aria-label="保存奶量记录" disabled></button>`;
+      doc.body.appendChild(layer);
+      const reference = layer.querySelector(".mcv-log-full-reference-v1");
+      const referenceGeometry = {
+        width: 842,
+        cups: {
+          // The source cups are vertically oval.  Use their actual outer
+          // bounds so the white inset inherits the same ellipse geometry.
+          left: { x: 55, y: 390, width: 282, height: 318 },
+          right: { x: 506, y: 390, width: 282, height: 318 }
+        },
+        controls: {
+          left: { x: 141, y: 634, size: 110 },
+          right: { x: 592, y: 634, size: 110 }
+        },
+        values: {
+          left: { x: 52, y: 783, width: 286, height: 102 },
+          right: { x: 504, y: 783, width: 286, height: 102 }
+        },
+        close: { x: 36, y: 44, width: 96, height: 96 },
+        save: { x: 52, y: 1121, width: 738, height: 115 }
+      };
+      let cupBoxes = {};
+      let renderAmounts = () => {};
+      const setReferenceBox = (element, box) => {
+        element.style.left = `${box.x}px`;
+        element.style.top = `${box.y}px`;
+        element.style.width = `${box.width || box.size}px`;
+        element.style.height = `${box.height || box.size}px`;
+        element.style.right = "auto";
+        element.style.bottom = "auto";
+      };
+      const syncReferenceGeometry = () => {
+        const referenceRect = reference.getBoundingClientRect();
+        const layerRect = layer.getBoundingClientRect();
+        if (!referenceRect.width || !layerRect.width) return;
+        const scale = referenceRect.width / referenceGeometry.width;
+        const position = box => ({
+          x: referenceRect.left - layerRect.left + box.x * scale,
+          y: referenceRect.top - layerRect.top + box.y * scale,
+          width: (box.width || box.size) * scale,
+          height: (box.height || box.size) * scale
+        });
+        ["left", "right"].forEach(side => {
+          const cup = position(referenceGeometry.cups[side]);
+          cupBoxes[side] = cup;
+          const inset = cup.width * .045;
+          setReferenceBox(layer.querySelector(`[data-log-fill="${side}"]`), {
+            x: cup.x + inset,
+            y: cup.y + inset,
+            width: cup.width - inset * 2,
+            height: cup.height - inset * 2
+          });
+          setReferenceBox(layer.querySelector(`[data-log-drag="${side}"]`), position(referenceGeometry.controls[side]));
+          setReferenceBox(layer.querySelector(`[data-log-output="${side}"]`), position(referenceGeometry.values[side]));
+        });
+        setReferenceBox(layer.querySelector(".mcv-log-reference-close-v1"), position(referenceGeometry.close));
+        setReferenceBox(layer.querySelector(".mcv-log-reference-save-v1"), position(referenceGeometry.save));
+        renderAmounts();
+      };
+      reference.addEventListener("load", syncReferenceGeometry);
+      if (reference.complete) syncReferenceGeometry();
+      const resizeLog = () => {
+        if (!layer.isConnected) return window.removeEventListener("resize", resizeLog);
+        syncReferenceGeometry();
+      };
+      window.addEventListener("resize", resizeLog);
+      const amounts = { left: 0, right: 0 };
+      renderAmounts = () => {
+        const canSave = amounts.left > 0 || amounts.right > 0;
+        layer.classList.toggle("has-log-adjustment", canSave);
+        const saveButton = layer.querySelector(".mcv-log-reference-save-v1");
+        saveButton.disabled = !canSave;
+        saveButton.classList.toggle("is-enabled", canSave);
+        saveButton.setAttribute("aria-disabled", String(!canSave));
+        ["left", "right"].forEach(side => {
+          const value = Math.round(amounts[side]);
+          const drag = layer.querySelector(`[data-log-drag="${side}"]`);
+          const cup = cupBoxes[side];
+          if (cup) {
+            const knobSize = cup.width * (110 / 282);
+            const fillRatio = Math.max(0, Math.min(1, value / 300));
+            const knobCenterY = cup.y + cup.height - cup.height * .04 - fillRatio * cup.height * .94;
+            drag.style.left = `${cup.x + (cup.width - knobSize) / 2}px`;
+            drag.style.top = `${knobCenterY - knobSize / 2}px`;
+            drag.style.width = `${knobSize}px`;
+            drag.style.height = `${knobSize}px`;
+          }
+          layer.querySelector(`[data-log-fill="${side}"]`).style.setProperty("--fill", `${Math.max(0, Math.min(100, value / 300 * 100))}%`);
+          drag.setAttribute("aria-valuenow", String(value));
+          layer.querySelector(`[data-log-output="${side}"]`).innerHTML = `${value}<small>ml</small>`;
+        });
+      };
+      layer.querySelectorAll("[data-log-drag]").forEach(drag => {
+        const side = drag.dataset.logDrag;
+        let gesture = null;
+        const update = clientY => {
+          if (!gesture) return;
+          amounts[side] = Math.max(0, Math.min(300, gesture.value + (gesture.startY - clientY) * 1.2));
+          renderAmounts();
+        };
+        drag.addEventListener("pointerdown", event => {
+          gesture = { startY: event.clientY, value: amounts[side] };
+          drag.classList.add("is-dragging");
+          drag.setPointerCapture(event.pointerId);
+          event.preventDefault();
+        });
+        drag.addEventListener("pointermove", event => update(event.clientY));
+        const finish = () => { gesture = null; drag.classList.remove("is-dragging"); };
+        drag.addEventListener("pointerup", finish);
+        drag.addEventListener("pointercancel", finish);
+        drag.addEventListener("keydown", event => {
+          if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+          event.preventDefault();
+          amounts[side] = Math.max(0, Math.min(300, amounts[side] + (event.key === "ArrowUp" ? 5 : -5)));
+          renderAmounts();
+        });
+      });
+      renderAmounts();
+      layer.querySelector(".mcv-log-reference-close-v1").addEventListener("click", () => layer.remove());
+      layer.querySelector(".mcv-log-reference-trash-v1")?.addEventListener("click", () => {
+        amounts.left = 0;
+        amounts.right = 0;
+        renderAmounts();
+        showComfortToast("已清空本次记录", 1800);
+      });
+      layer.querySelector(".mcv-log-reference-save-v1").addEventListener("click", () => {
+        recordPumpingSession(amounts);
+        // The trend is evaluated on save, but the considerate prompt belongs
+        // to the next pumping session rather than this completed record flow.
+        showPumpingLogSaved(layer);
+      });
+    }
+
+    function showPumpingLogSaved(layer) {
+      if (!layer?.isConnected) return;
+      layer.classList.add("is-saved");
+      layer.innerHTML = `<div class="mcv-log-saved-sheet-v1"><img class="mcv-log-saved-bunny-v1" src="../assets/saved-bunny-reference.png" alt=""><h2>Saved</h2><p>舒适档位已保存</p></div>`;
+      win.setTimeout(() => {
+        if (!layer.isConnected) return;
+        layer.remove();
+        showComfortToast("奶量记录已保存", 1800);
+      }, 1500);
     }
 
     const interactionSelector = ".mcv-level-module,.mcv-mode-card,.mcv-speed-module,.mcv-control-actions,.pause-button,.hold-button";
@@ -493,22 +960,28 @@ function enhancePrecheck() {
       }).observe(comfortEntry, { attributes:true, attributeFilter:["class","hidden"] });
     }
 
-    // Keep the demo trigger deterministic even if the base prototype changes
-    // which comfort card is visible while entering Expression.
+    // Keep the calibration invitation deterministic even if the base prototype
+    // changes which expression state it enters automatically.
     if (typeof win.enterExpression === "function" && !win.enterExpression.__comfortBubbleWrapped) {
       const enterExpressionBase = win.enterExpression;
       const enterExpressionWithBubble = function (...args) {
+        // The base prototype advances after three seconds for demo purposes.
+        // Expression is a user-selected transition in this flow.
+        if (!manualExpressionTransition) return;
         const result = enterExpressionBase.apply(this, args);
-        const entry = doc.getElementById("comfortEntry");
-        const placeholder = doc.getElementById("comfortPlaceholder");
-        // Keep the dedicated comfort card in place during the state swap.
-        if (entry && placeholder) retainComfortCardDuringSession();
+        win.__setSelectedRhythmV6?.("Expression");
+        expressionGuideDeferred = false;
         lockOriginalLevelModuleHeight();
         syncComfortCards();
         return result;
       };
       enterExpressionWithBubble.__comfortBubbleWrapped = true;
       win.enterExpression = enterExpressionWithBubble;
+      win.__enterExpressionManuallyV6 = () => {
+        manualExpressionTransition = true;
+        try { return win.enterExpression(); }
+        finally { manualExpressionTransition = false; }
+      };
     }
     const startPumpingButton = doc.getElementById("startPumping");
     if (startPumpingButton) {
@@ -516,7 +989,14 @@ function enhancePrecheck() {
       // Allow the base prototype to return to its idle card only after a
       // session is actually finished, never while pumping is live.
       new win.MutationObserver(() => {
-        if (!startPumpingButton.hidden) keepComfortCardVisible = false;
+        if (!startPumpingButton.hidden) {
+          calibrationInviteShownThisSession = false;
+          win.__setSelectedRhythmV6?.("Stimulation");
+          win.clearTimeout(comfortBubbleDemoTimer);
+          removePhasePrompt();
+          hideCalibrationInvite();
+          showPumpingLog();
+        }
       }).observe(startPumpingButton, { attributes:true, attributeFilter:["hidden"] });
     }
     ["leftLevelChip", "rightLevelChip"].forEach(id => {
@@ -527,6 +1007,7 @@ function enhancePrecheck() {
     function showCalibration(options = {}) {
       const existing = doc.getElementById("cnCalibrationV4");
       if (existing) return;
+      retainComfortCardDuringSession();
       comfortBubbleDismissed = true;
       removeComfortBubble(true);
 
@@ -598,7 +1079,7 @@ function enhancePrecheck() {
             <div class="v4-control-row"><button class="v4-step v4-minus" aria-label="降低一档">−</button><span>不舒服就降<br>舒适优先</span></div>
           </div>
           <div class="v4-rail-wrap">
-            <div class="v4-rail" role="slider" aria-label="当前侧吸力档位" aria-valuemin="1" aria-valuemax="15" tabindex="0">
+            <div class="v4-rail" role="slider" aria-label="当前侧吸力档位" aria-valuemin="1" aria-valuemax="${MAX_LEVEL}" tabindex="0">
               <span class="v4-ticks" aria-hidden="true">${"<i></i>".repeat(MAX_LEVEL)}</span>
               <b class="v4-marker"></b>
             </div>
