@@ -1,6 +1,6 @@
 (function () {
-  const PROFILE_KEY = "mobileFlowComfortProfileV2";
-  const DRAFT_KEY = "mobileFlowComfortDraftV3";
+  const PROFILE_KEY = "mobileFlowComfortProfileV3";
+  const DRAFT_KEY = "mobileFlowComfortDraftV4";
   const PUMPING_HISTORY_KEY = "mobileFlowPumpingHistoryV1";
   const TREND_PROMPT_KEY = "mobileFlowTrendPromptV1";
   const MAX_LEVEL = 9;
@@ -10,6 +10,7 @@
     const win = frame.contentWindow;
     if (!doc || !win || win.__comfortV4Installed) return;
     win.__comfortV4Installed = true;
+    frame.classList.remove("is-prototype-ready");
     let syncComfortPlaceholder = function () {};
     let syncComfortCards = function () {};
     let comfortBubbleTimer = 0;
@@ -18,6 +19,8 @@
     let lastComfortInteractionAt = 0;
     let selectedRhythm = "Stimulation";
     let expressionGuideDeferred = false;
+    let expressionCardDismissed = false;
+    let comfortFeatureActivated = false;
     let manualExpressionTransition = false;
     let calibrationInviteShownThisSession = false;
     // The base prototype swaps the two comfort nodes during state changes.
@@ -41,10 +44,10 @@
       .mcv-native-signal-v4{display:flex;align-items:flex-end;gap:2px;height:14px}.mcv-native-signal-v4 i{display:block;width:3px;border-radius:2px;background:#2d1d24}.mcv-native-signal-v4 i:nth-child(1){height:5px}.mcv-native-signal-v4 i:nth-child(2){height:8px}.mcv-native-signal-v4 i:nth-child(3){height:11px}.mcv-native-signal-v4 i:nth-child(4){height:14px}
       .mcv-native-wifi-v4{position:relative;width:18px;height:13px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::before{content:"";position:absolute;left:4px;top:2px;width:8px;height:7px;border-top:3px solid #2d1d24;border-radius:50%}.mcv-native-wifi-v4::after{content:"";position:absolute;left:7px;top:7px;width:4px;height:4px;border-radius:50%;background:#2d1d24}
       .mcv-native-battery-v4{position:relative;width:24px;height:12px;border:2px solid #2d1d24;border-radius:4px}.mcv-native-battery-v4::before{content:"";position:absolute;inset:2px;border-radius:2px;background:#2d1d24}.mcv-native-battery-v4::after{content:"";position:absolute;right:-4px;top:3px;width:2px;height:4px;border-radius:0 2px 2px 0;background:#2d1d24}
-      .mcv-native-nav-v4{position:fixed;z-index:50;top:0;left:0;right:0;height:80px;padding:16px 6% 12px;display:grid;grid-template-columns:48px minmax(0,1fr) 96px;align-items:center;background-color:transparent!important;background-image:none!important;backdrop-filter:none!important}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
+      .mcv-native-nav-v4{position:fixed;z-index:50;top:0;left:0;right:0;height:80px;padding:16px 6% 12px;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;background-color:transparent!important;background-image:none!important;backdrop-filter:none!important}.mcv-native-nav-v4 h2{margin:0;text-align:center;font-size:18px;font-weight:650;letter-spacing:.2px}
       .mcv-native-icon-button-v4{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;color:#2d1d24;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-back-v4{font-size:32px;font-weight:300;line-height:1;transform:translateY(-1px)}
-      .mcv-native-tools-v4{justify-self:end;display:flex;width:48px;height:48px;align-items:center;justify-content:center;border-radius:26px;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-tools-v4 button{display:grid;place-items:center;width:42px;height:42px;color:#2d1d24;background:transparent}.mcv-native-help-v4{font-size:22px;font-weight:700}.mcv-native-gear-v4{font-size:27px;line-height:1}
-      .mcv-native-message-canvas-v7{position:absolute;z-index:1;top:82px;left:12%;right:12%;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#76585f;font-size:11px;font-weight:600;line-height:1.5;text-align:center;pointer-events:none}.mcv-native-device-v4{position:absolute;z-index:2;left:6%;right:6%;top:140px;bottom:18px;display:grid;grid-template-rows:minmax(0,1fr) 30px;align-items:center;overflow:visible;background:transparent}.mcv-native-pumps-v4{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;width:100%;height:100%}.mcv-native-pump-v4{height:auto;aspect-ratio:1/1;align-self:center;background-image:url("../assets/dual-pump-transparent-v4.png");background-repeat:no-repeat;background-size:200% auto;filter:contrast(1.03);transform:scale(.7);transform-origin:center}.mcv-native-pump-v4--left{background-position:left center}.mcv-native-pump-v4--right{background-position:right center}.mcv-native-device-v4::before,.mcv-native-device-v4::after{display:none}.mcv-native-pump-stats-v6{position:relative;z-index:3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;align-items:end;width:100%;padding:0;color:#743044;text-align:center;background:transparent;transform:translateY(11px)}.mcv-native-pump-stats-v6 span{display:flex;flex-direction:column;gap:2px;align-items:center;justify-self:center;font-size:9px;font-weight:700;line-height:1}.mcv-native-pump-stats-v6 em{font-style:normal;color:#7c3347;font-size:12px;font-weight:800}.mcv-native-pump-stats-v6 small{color:#82747a;font-size:9.5px;font-weight:700}
+      .mcv-native-tools-v4{justify-self:end;display:flex;width:48px;height:48px;align-items:center;justify-content:center;border-radius:26px;background:rgba(255,255,255,.84);box-shadow:0 8px 24px rgba(88,53,63,.06)}.mcv-native-gear-v4{display:grid;place-items:center;width:42px;height:42px;color:#2d1d24;font-size:27px;line-height:1;pointer-events:none;user-select:none}
+      .mcv-native-message-canvas-v7{position:absolute;z-index:1;top:82px;left:12%;right:12%;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#76585f;font-size:11px;font-weight:600;line-height:1.5;text-align:center;pointer-events:none}.mcv-native-device-v4{position:absolute;z-index:2;left:6%;right:6%;top:140px;bottom:18px;display:grid;grid-template-rows:minmax(0,1fr) 30px;align-items:center;overflow:visible;background:transparent}.mcv-native-pumps-v4{position:relative;z-index:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:center;width:100%;height:100%}.mcv-native-pump-v4{height:auto;aspect-ratio:1/1;align-self:center;background-image:url("../assets/dual-pump-transparent-v4.png");background-repeat:no-repeat;background-size:200% auto;filter:contrast(1.03);transform:scale(.7);transform-origin:center}.mcv-native-pump-v4--left{background-position:left center}.mcv-native-pump-v4--right{background-position:right center}.mcv-native-device-v4::before,.mcv-native-device-v4::after{display:none}.mcv-native-pump-stats-v6{position:relative;z-index:3;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;align-items:end;width:100%;padding:0;color:#743044;text-align:center;background:transparent;transform:translateY(11px)}.mcv-native-pump-stats-v6 span{display:flex;flex-direction:column;gap:2px;align-items:center;justify-self:center;font-size:9px;font-weight:700;line-height:1}.mcv-native-pump-stats-v6 span:first-child{transform:translateX(-6px)}.mcv-native-pump-stats-v6 span:last-child{transform:translateX(4px)}.mcv-native-pump-stats-v6 em{font-style:normal;color:#7c3347;font-size:12px;font-weight:800}.mcv-native-pump-stats-v6 small{color:#82747a;font-size:9.5px;font-weight:700}
       .mcv-content-scrim{display:none!important}
       /* Suppress every legacy black/English prototype toast. Purpose-built
          Chinese feedback uses .mcv-comfort-toast-v5 instead. */
@@ -61,6 +64,10 @@
       .mcv-level-module{order:1;flex:0 0 clamp(310px,39svh,350px)!important;height:clamp(310px,39svh,350px)!important;min-height:clamp(310px,39svh,350px)!important;border-radius:24px!important;background:#fff!important;box-shadow:0 10px 28px rgba(82,54,63,.055)!important}
       .mcv-level-module .mcv-level-visual{inset:112px 24px 16px!important}
       .mcv-level-module .reference-level-zone{bottom:16px!important}
+      .mcv-level-module #bothControl{transition:color .18s ease,background .18s ease,box-shadow .18s ease,transform .18s ease}.mcv-level-module #bothControl[aria-pressed="true"]{color:#fff!important;background:#770523!important;box-shadow:0 8px 18px rgba(119,5,35,.16)!important}.mcv-level-module #bothControl:active{transform:scale(.97)}
+      body[data-mcz-comfort-hidden] #comfortEntry,body[data-mcz-comfort-hidden] #comfortPlaceholder,body:has(#startPumping:not([hidden])) #comfortEntry,body:has(#startPumping:not([hidden])) #comfortPlaceholder,body:has(.mcv-rhythm-options-v6 :is([data-rhythm="Stimulation"],[data-rhythm="Mixed"]).is-active) #comfortEntry,body:has(.mcv-rhythm-options-v6 :is([data-rhythm="Stimulation"],[data-rhythm="Mixed"]).is-active) #comfortPlaceholder{display:none!important}
+      body[data-mcz-comfort-hidden] .mcv-level-module .mcv-level-visual,body:has(#startPumping:not([hidden])) .mcv-level-module .mcv-level-visual,body:has(.mcv-rhythm-options-v6 :is([data-rhythm="Stimulation"],[data-rhythm="Mixed"]).is-active) .mcv-level-module .mcv-level-visual{inset:16px 24px 16px!important}
+      body[data-mcz-comfort-hidden] .mcv-level-module .reference-level-zone,body:has(#startPumping:not([hidden])) .mcv-level-module .reference-level-zone,body:has(.mcv-rhythm-options-v6 :is([data-rhythm="Stimulation"],[data-rhythm="Mixed"]).is-active) .mcv-level-module .reference-level-zone{top:16px!important;bottom:16px!important}
       .mcv-mode-card,.mcv-speed-module{flex:0 0 auto!important;min-height:0!important}
       .mcv-speed-module{order:3}
       .mcv-bottom-shell{position:fixed!important;z-index:50!important;left:6%!important;right:6%!important;bottom:16px!important;display:block!important;width:auto!important;margin:0!important;padding:0!important;overflow:visible!important;background:transparent!important}
@@ -78,10 +85,12 @@
       .cn-comfort-invite .mcv-invite-actions>button{width:100%!important;min-width:0!important;height:44px!important}
       .mcv-level-module>.mcv-comfort-entry.mcv-comfort-entry-v4{position:absolute!important;z-index:6!important;inset:0 0 auto!important;width:auto!important;max-width:none!important;height:104px!important;padding:17px 24px 14px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;grid-template-rows:1fr!important;align-items:stretch!important;gap:18px!important;border:0!important;border-bottom:1px solid rgba(238,218,224,.76)!important;border-radius:24px 24px 0 0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;box-sizing:border-box!important}
       .mcv-comfort-entry.mcv-comfort-entry-v4[hidden]{display:none!important}
+      .mcv-level-module>.mcv-comfort-card-v4.is-expression-dismissed{display:none!important}
       .mcv-level-module>.mcv-comfort-placeholder.mcv-comfort-card-v4{position:absolute!important;z-index:6!important;inset:0 0 auto!important;width:auto!important;max-width:none!important;height:104px!important;padding:17px 24px 14px!important;display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;grid-template-rows:1fr!important;align-items:stretch!important;gap:18px!important;border:0!important;border-bottom:1px solid rgba(238,218,224,.76)!important;border-radius:24px 24px 0 0!important;background:transparent!important;box-shadow:none!important;box-sizing:border-box!important;overflow:visible!important}
       .mcv-level-module>.mcv-comfort-placeholder-v4{display:grid!important;grid-template-columns:minmax(0,1fr) 108px!important;align-items:stretch!important;gap:18px!important}
       .mcv-comfort-placeholder.mcv-comfort-card-v4[hidden]{display:none!important}
       .mcv-card-info-v5{min-width:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:1px 0}.mcv-card-title-row-v5{display:flex;align-items:center;gap:9px;min-width:0}.mcv-card-title-v5{color:#6f1731;font-size:19px;font-weight:800;letter-spacing:-.3px;line-height:1.1;white-space:nowrap}.mcv-card-status-v5{display:none!important}.mcv-card-copy-v5{color:#5b3742;font-size:12px;font-weight:750;white-space:normal;line-height:1.25}.mcv-card-meta-v5{color:#94878c;font-size:9.5px;font-weight:600;line-height:1.2}.mcv-card-actions-v5{display:flex;min-width:0;height:100%;flex-direction:column;align-items:stretch;justify-content:center;gap:4px;padding-left:7px;border-left:1px solid rgba(130,75,91,.10)}.mcv-card-primary-v5{width:108px;min-width:108px;min-height:42px;padding:0 8px;border-radius:15px;color:#fff;background:#90002b;font-size:10.5px;font-weight:800;line-height:1.2;white-space:normal}.mcv-card-secondary-v5{width:108px;min-width:108px;min-height:24px;padding:0;color:#821632;background:transparent;font-size:10px;font-weight:800;text-align:center}.mcv-card-primary-v5:active,.mcv-card-secondary-v5:active{transform:scale(.97)}
+      .mcv-comfort-card-v4.is-expression-invite .mcv-card-actions-v5{justify-content:flex-end!important;padding-top:22px!important}.mcv-comfort-card-v4.is-expression-invite .mcv-card-primary-v5{min-height:40px;margin-top:0}.mcv-card-dismiss-v5{position:absolute;z-index:8;top:6px;right:8px;display:grid;place-items:center;width:30px;height:30px;padding:0;border-radius:50%;color:#806b72;background:rgba(255,255,255,.88);font-size:19px;font-weight:400;line-height:1}.mcv-card-dismiss-v5:active{transform:scale(.94)}
       .mcv-comfort-card-v4.is-bubble-active{z-index:35!important}.mcv-bottom-shell.is-bubble-active{z-index:41!important}.mcv-comfort-bubble-v5{position:absolute;z-index:42;left:6%;right:6%;bottom:calc(100% + 10px);height:62px;padding:9px 46px 9px 34px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:1fr 1fr;align-items:center;column-gap:9px;border:1px solid #edd2da;border-radius:18px;background:#fffaf7;box-shadow:0 10px 24px rgba(73,39,50,.13);box-sizing:border-box}.mcv-comfort-bubble-v5::before{content:"";position:absolute;left:15px;top:50%;width:8px;height:8px;border-radius:50%;background:#9d0632;transform:translateY(-50%);animation:mcv-comfort-pulse-v5 1.8s ease-in-out infinite}.mcv-bubble-title-v5{grid-column:1;grid-row:1;color:#6d2438;font-size:10.5px;font-weight:800;line-height:1.2}.mcv-bubble-copy-v5{grid-column:1;grid-row:2;color:#8d7e83;font-size:9.5px;line-height:1.2}.mcv-bubble-start-v5{grid-column:2;grid-row:1/3;min-width:44px;min-height:44px;color:#8e0028;background:transparent;font-size:11px;font-weight:800}.mcv-bubble-close-v5{position:absolute;right:6px;top:5px;width:28px;height:28px;border-radius:50%;color:#806b72;background:transparent;font-size:17px}.mcv-comfort-bubble-v5.is-leaving{opacity:0;transform:translateY(5px);transition:opacity .16s ease,transform .16s ease}@keyframes mcv-comfort-pulse-v5{0%,100%{box-shadow:0 0 0 0 rgba(157,6,50,.22)}50%{box-shadow:0 0 0 6px rgba(157,6,50,0)}}
       .mcv-card-primary-v5:focus-visible,.mcv-card-secondary-v5:focus-visible,.mcv-bubble-start-v5:focus-visible,.mcv-bubble-close-v5:focus-visible{outline:2px solid #8e0028;outline-offset:2px}
       @media(max-width:360px){.mcv-level-module>.mcv-comfort-entry.mcv-comfort-entry-v4,.mcv-level-module>.mcv-comfort-placeholder.mcv-comfort-card-v4{grid-template-columns:minmax(0,1fr) 92px!important;padding:14px 16px!important;gap:14px!important}.mcv-card-copy-v5{font-size:11px}.mcv-card-primary-v5,.mcv-card-secondary-v5{width:92px;min-width:92px}.mcv-card-primary-v5{padding:0 7px}.mcv-card-actions-v5{padding-left:0;border-left:0}}
@@ -95,6 +104,7 @@
       .mcv-card-tertiary-v5{width:108px;min-width:108px;min-height:19px;padding:0;color:#9b7781;background:transparent;font-size:9px;font-weight:700;text-align:center}
       .mcv-card-status-v5.is-ramping{color:#8e0028;background:#f9e8ec}.mcv-card-status-v5.is-active{color:#7c1733;background:#f5dce3}
       .mcv-comfort-toast-v5{position:fixed;z-index:80;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 48px),350px);padding:11px 16px;border:1px solid rgba(132,61,81,.12);border-radius:18px;color:#653444;background:rgba(255,250,248,.96);box-shadow:0 10px 26px rgba(82,38,53,.13);font-size:11px;font-weight:700;line-height:1.45;text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,10px);transition:opacity .24s ease,transform .24s ease}.mcv-comfort-toast-v5.is-visible{opacity:1;transform:translate(-50%,0)}
+      .mcv-comfort-dismiss-layer-v5{position:fixed;z-index:96;inset:0;display:grid;place-items:center;padding:24px;background:rgba(48,31,38,.30);backdrop-filter:blur(3px);animation:mcv-comfort-dismiss-fade-v5 .18s ease-out}.mcv-comfort-dismiss-dialog-v5{width:min(100%,320px);padding:25px 22px 20px;border:1px solid rgba(255,221,225,.88);border-radius:28px;background:#fffdfa;box-shadow:0 22px 56px rgba(62,0,16,.20);text-align:center;animation:mcv-comfort-dismiss-rise-v5 .22s cubic-bezier(.2,.9,.25,1)}.mcv-comfort-dismiss-dialog-v5 h3{margin:0;color:#3e0010;font-family:"Exposure[-10]",Georgia,serif;font-size:22px;font-weight:500;line-height:1.3}.mcv-comfort-dismiss-dialog-v5 p{margin:10px 2px 20px;color:#75696e;font-size:12px;line-height:1.6}.mcv-comfort-dismiss-actions-v5{display:grid;gap:10px}.mcv-comfort-dismiss-actions-v5 button{width:100%;height:46px;border-radius:999px;font-size:12px;font-weight:800}.mcv-comfort-dismiss-continue-v5{color:#fff;background:#770523;box-shadow:0 7px 16px rgba(119,5,35,.16)}.mcv-comfort-dismiss-later-v5{color:#770523;border:1px solid #ffdde1;background:#fff7f8}.mcv-comfort-dismiss-actions-v5 button:focus-visible{outline:3px solid rgba(238,156,167,.72);outline-offset:3px}@keyframes mcv-comfort-dismiss-fade-v5{from{opacity:0}to{opacity:1}}@keyframes mcv-comfort-dismiss-rise-v5{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
       .mcv-mode-card{order:0!important;flex:0 0 116px!important;height:116px!important;min-height:116px!important;padding:18px 28px!important;border:1px solid #f2d5db!important;border-radius:24px!important;background:#fff1f3!important;box-shadow:none!important;color:#531326!important}.mcv-rhythm-head-v6{display:flex;align-items:center;justify-content:space-between;height:25px}.mcv-rhythm-head-v6 strong{font-size:16px!important;font-weight:800!important;letter-spacing:-.15px}.mcv-rhythm-more-v6{display:grid;place-items:center;width:28px;height:28px;margin-right:-7px;border-radius:50%;color:#6e1732;background:transparent;font-size:26px;font-weight:400;line-height:1}.mcv-rhythm-options-v6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px}.mcv-rhythm-options-v6 button{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;height:48px;padding:0 8px;border-radius:999px;color:#a49aa0;background:rgba(255,255,255,.72);box-shadow:0 4px 10px rgba(96,47,61,.08);font-size:11px;font-weight:750;white-space:nowrap;transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}.mcv-rhythm-icon-v6{width:19px;height:19px;flex:0 0 auto;fill:none;stroke:#c75770;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}.mcv-expression-icon-v6{stroke-width:2.7}.mcv-rhythm-options-v6 button.is-active{color:#fff;background:linear-gradient(135deg,#8e0028,#c65771);box-shadow:0 7px 15px rgba(142,0,40,.17)}.mcv-rhythm-options-v6 button.is-active .mcv-rhythm-icon-v6{stroke:#fff}.mcv-rhythm-options-v6 button:active{transform:scale(.97)}
       @media(max-width:360px){.mcv-card-tertiary-v5{width:92px;min-width:92px}}
       @media(prefers-reduced-motion:reduce){.mcv-comfort-toast-v5,.mcv-card-primary-v5{transition:none!important}}
@@ -131,7 +141,7 @@
     precheckStyle.textContent = ".cn-precheck{padding:14px 18px calc(18px + env(safe-area-inset-bottom))!important;background:#fbf7f3!important}\n.cn-precheck-status-v4{position:relative;width:100%;height:154px;flex:0 0 154px;display:grid;grid-template-columns:62px minmax(0,1fr) 62px;grid-template-rows:58px 1px 1fr;column-gap:12px;align-items:center;padding:14px 16px 20px;box-sizing:border-box;border-radius:30px;color:#fff;background:linear-gradient(125deg,#98012e,#bd2f55 58%,#cf627d);box-shadow:0 14px 30px rgba(113,30,57,.16)}.cn-precheck-status-v4:after{content:\"\";position:absolute;left:50%;bottom:8px;width:108px;height:5px;border-radius:99px;background:#fff;transform:translateX(-50%)}\n.cn-precheck-device-v4{grid-column:1;grid-row:1;display:grid;place-items:center;width:62px;height:58px;border-radius:18px;background:#fff;overflow:hidden}.cn-precheck-device-v4 img{display:block;width:90%;height:90%;object-fit:contain}\n.cn-precheck-product-v4{grid-column:2;grid-row:1;display:flex;align-items:center;gap:8px;min-width:0}.cn-precheck-product-v4 strong{font-size:24px;line-height:1}.cn-precheck-swap-v4{font-size:13px;line-height:.8;color:#efb5c4}\n.cn-precheck-chevron-v4{grid-column:3;grid-row:1;justify-self:end;font-size:32px;font-weight:300;color:#efb5c4}\n.cn-precheck-divider-v4{grid-column:1/4;grid-row:2;width:100%;height:1px;background:rgba(255,255,255,.2)}\n.cn-precheck-program-v4{grid-column:1/3;grid-row:3;align-self:end;display:flex;flex-direction:column;gap:5px}.cn-precheck-program-v4 strong{font-size:22px}.cn-precheck-program-v4 span{font-size:13px;color:#f8d8e1}\n.cn-precheck-play-v4{grid-column:3;grid-row:3;align-self:end;justify-self:end;width:58px;height:48px;border:0;border-radius:22px;color:#fff;background:#870022;font-size:19px;box-shadow:none}\n.cn-precheck-header{padding:16px 50px 12px!important}.cn-precheck-back{top:9px!important;width:46px!important;height:46px!important}.cn-precheck h2{font-size:20px!important;font-weight:650!important;letter-spacing:.5px!important}.cn-precheck-header p{margin-top:6px!important;font-size:12px!important}\n.cn-precheck-scroll{flex:1!important;min-height:0!important;gap:14px!important;padding:4px 5px 12px!important;margin:0!important;scroll-padding-inline:5px!important}\n.cn-check-card{flex:0 0 100%!important;min-height:220px!important;border-radius:28px!important;padding:24px!important;gap:20px!important;box-shadow:0 12px 30px rgba(82,54,63,.07)!important}.cn-check-card svg{width:108px!important;height:108px!important}.cn-check-card p{font-size:15px!important}\n.cn-precheck-dots{margin:0 0 13px!important}.cn-precheck-actions{margin-top:0!important;gap:12px!important}.cn-precheck-actions button{height:50px!important;border-radius:25px!important}\n@media(max-height:720px){.cn-precheck-status-v4{height:136px;flex-basis:136px}.cn-check-card{min-height:190px}.cn-check-card svg{width:90px!important;height:90px!important}}";
 doc.head.appendChild(precheckStyle);
 precheckStyle.textContent += "\n.cn-precheck-scroll{flex:0 0 auto!important;min-height:auto!important;margin:0 -18px!important;padding:6px 34px 14px!important;gap:14px!important;scroll-padding-inline:34px!important;scroll-behavior:smooth!important}\n.cn-check-card{flex:0 0 calc(100% - 76px)!important;min-height:0!important;aspect-ratio:20/23!important;border-radius:28px!important;scroll-snap-align:center!important;scroll-snap-stop:always!important}\n.cn-precheck-dots{margin:0 0 12px!important}\n.cn-precheck-actions{margin-top:auto!important}\n.cn-precheck-confirm{color:#fff!important;background:linear-gradient(135deg,#97032d,#c95170)!important}\n@media(max-height:720px){.cn-check-card{aspect-ratio:1/1!important}.cn-precheck-scroll{padding-top:2px!important;padding-bottom:8px!important}}";
-precheckStyle.textContent += "\n.cn-precheck{inset:calc(28% - 16px) 14px calc(16px + env(safe-area-inset-bottom))!important;padding:18px!important;border:1px solid rgba(255,255,255,.86)!important;border-radius:34px!important;background:#fffaf7!important;box-shadow:0 0 0 100vmax rgba(58,35,43,.18),0 -12px 34px rgba(85,39,53,.15),0 8px 20px rgba(85,39,53,.08)!important;overflow:hidden!important;animation:mcv-sheet-rise-v4 .36s cubic-bezier(.2,.9,.25,1)!important}\n.cn-precheck-status-v4{display:none!important}\n.cn-precheck-header{padding-top:8px!important}\n.cn-precheck-back{left:auto!important;right:0!important;top:3px!important;font-size:26px!important}\n.cn-precheck-actions{grid-template-columns:1fr!important;padding:8px 0 0!important}\n.cn-precheck-confirm{grid-column:1!important;width:100%!important}\n@keyframes mcv-sheet-rise-v4{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}\n@media(max-height:720px){.cn-precheck{inset:calc(28% - 10px) 10px calc(10px + env(safe-area-inset-bottom))!important;border-radius:28px!important;padding:14px!important}}";
+precheckStyle.textContent += "\n.cn-precheck{inset:calc(28% - 16px) 0 0!important;padding:18px 18px calc(18px + env(safe-area-inset-bottom))!important;border:0!important;border-top:1px solid rgba(255,255,255,.86)!important;border-radius:34px 34px 0 0!important;background:#fffaf7!important;box-shadow:0 0 0 100vmax rgba(58,35,43,.18),0 -12px 34px rgba(85,39,53,.15)!important;overflow:hidden!important;animation:mcv-sheet-rise-v4 .36s cubic-bezier(.2,.9,.25,1)!important}\n.cn-precheck-status-v4{display:none!important}\n.cn-precheck-header{padding-top:8px!important}\n.cn-precheck-back{left:auto!important;right:0!important;top:3px!important;font-size:26px!important}\n.cn-precheck-actions{grid-template-columns:1fr!important;padding:8px 0 0!important}\n.cn-precheck-confirm{grid-column:1!important;width:100%!important}\n@keyframes mcv-sheet-rise-v4{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}\n@media(max-height:720px){.cn-precheck{inset:calc(28% - 10px) 0 0!important;padding:14px 14px calc(14px + env(safe-area-inset-bottom))!important;border-radius:28px 28px 0 0!important}}";
 precheckStyle.textContent += "\n.cn-check-card.cn-learning-card{flex:0 0 84%!important;height:min(54vh,400px)!important;min-height:310px!important;aspect-ratio:auto!important;gap:8px!important;justify-content:center!important;padding:20px!important;box-sizing:border-box!important}.cn-check-card .cn-learning-image,.cn-check-card .cn-learning-media{display:block!important;width:84%!important;height:84%!important;max-width:312px!important;max-height:300px!important;flex:0 1 auto!important;object-fit:contain!important;object-position:center!important}.cn-check-card .cn-learning-media{position:relative!important}.cn-check-card .cn-learning-media .cn-learning-image{width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}.cn-learning-video-entry{position:absolute!important;left:8px!important;bottom:8px!important;z-index:2!important;height:36px!important;padding:0 13px!important;border:1px solid rgba(142,0,40,.14)!important;border-radius:999px!important;color:#8e0028!important;background:rgba(255,250,248,.9)!important;box-shadow:0 5px 12px rgba(82,33,47,.10)!important;font-size:11px!important;font-weight:800!important;backdrop-filter:blur(8px)!important}.cn-learning-video-entry:active{transform:scale(.97)!important}.cn-learning-video-modal{position:fixed!important;inset:0!important;z-index:120!important;display:grid!important;place-items:center!important;padding:24px!important;background:rgba(57,36,43,.42)!important}.cn-learning-video-card{width:min(100%,330px)!important;border-radius:28px!important;padding:18px!important;background:#fffaf7!important;box-shadow:0 18px 48px rgba(41,22,29,.28)!important}.cn-learning-video-head{display:flex!important;align-items:center!important;justify-content:space-between!important;margin-bottom:14px!important;color:#3d2b31!important;font-size:15px!important;font-weight:800!important}.cn-learning-video-close{width:34px!important;height:34px!important;border-radius:50%!important;color:#851433!important;background:#fff!important;font-size:21px!important}.cn-learning-video-stage{display:grid!important;place-items:center!important;min-height:175px!important;border-radius:20px!important;color:#fff!important;background:linear-gradient(135deg,#97032d,#c95170)!important;text-align:center!important}.cn-learning-video-stage strong{display:block!important;margin-top:8px!important;font-size:14px!important}.cn-learning-video-play{width:52px!important;height:52px!important;border:1px solid rgba(255,255,255,.75)!important;border-radius:50%!important;color:#fff!important;background:rgba(255,255,255,.12)!important;font-size:20px!important}.cn-learning-video-card p{margin:12px 0 0!important;color:#88797e!important;font-size:11px!important;line-height:1.5!important;text-align:center!important}.cn-check-card.cn-learning-card h3{margin:0!important;color:#7f1736!important;font-size:17px!important;line-height:1.3!important;font-weight:800!important}.cn-check-card.cn-learning-card p{margin:0!important;max-width:230px!important;color:#786c70!important;font-size:12px!important;font-weight:600!important;line-height:1.5!important}\n@media(max-height:720px){.cn-check-card.cn-learning-card{height:300px!important;min-height:300px!important}.cn-check-card .cn-learning-image,.cn-check-card .cn-learning-media{width:82%!important;height:80%!important;max-height:233px!important}.cn-check-card.cn-learning-card h3{font-size:15px!important}.cn-check-card.cn-learning-card p{font-size:11px!important}}";
 precheckStyle.textContent += "\n.cn-precheck-video-entry{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;width:max-content!important;height:36px!important;margin:0 auto 16px!important;padding:0 15px!important;border:1px solid #ead3da!important;border-radius:999px!important;color:#8e0028!important;background:#fff!important;box-shadow:0 5px 12px rgba(82,33,47,.07)!important;font-size:11px!important;font-weight:800!important}.cn-precheck-video-entry:active{transform:scale(.97)!important}";
 
@@ -212,7 +222,7 @@ function enhancePrecheck() {
       const header = doc.createElement("section");
       header.className = "mcv-native-head-v4";
       header.setAttribute("aria-label", "Pump control header");
-      header.innerHTML = `<nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4"><button class="mcv-native-gear-v4" type="button" aria-label="Settings">⚙</button></span></nav><div class="mcv-native-message-canvas-v7" aria-label="消息提示区域"></div><div class="mcv-native-device-v4"><div class="mcv-native-pumps-v4" role="img" aria-label="Dual breast pumps"><span class="mcv-native-pump-v4 mcv-native-pump-v4--left"></span><span class="mcv-native-pump-v4 mcv-native-pump-v4--right"></span></div><div class="mcv-native-pump-stats-v6" aria-label="设备状态"><span><em>02:50</em><small>▣ 99%</small></span><span><em>01:33</em><small>▣ 99%</small></span></div></div>`;
+      header.innerHTML = `<nav class="mcv-native-nav-v4"><button class="mcv-native-icon-button-v4 mcv-native-back-v4" type="button" aria-label="Back">‹</button><h2>Pump Control</h2><span class="mcv-native-tools-v4" aria-hidden="true"><span class="mcv-native-gear-v4">⚙</span></span></nav><div class="mcv-native-message-canvas-v7" aria-label="消息提示区域"></div><div class="mcv-native-device-v4"><div class="mcv-native-pumps-v4" role="img" aria-label="Dual breast pumps"><span class="mcv-native-pump-v4 mcv-native-pump-v4--left"></span><span class="mcv-native-pump-v4 mcv-native-pump-v4--right"></span></div><div class="mcv-native-pump-stats-v6" aria-label="设备状态"><span><em>02:50</em><small>▣ 99%</small></span><span><em>01:33</em><small>▣ 99%</small></span></div></div>`;
       page.prepend(header);
     }
     // The prototype now opens directly on Pump Control. Keep the old dashboard
@@ -231,7 +241,7 @@ function enhancePrecheck() {
       if (!canvas) return;
       canvas.textContent = message;
     }
-    setHeaderMessage("在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。");
+    setHeaderMessage("");
 
     function enforceContinuousHeaderBackground() {
       const nativeHeader = doc.querySelector(".mcv-native-head-v4");
@@ -257,11 +267,19 @@ function enhancePrecheck() {
       card.innerHTML = `<div class="mcv-rhythm-head-v6"><strong>Stimulation</strong><button type="button" class="mcv-rhythm-more-v6" aria-label="选择韵律">›</button></div><div class="mcv-rhythm-options-v6" role="group" aria-label="吸乳韵律"><button type="button" class="is-active" data-rhythm="Stimulation">${heartIcon}Stimulation</button><button type="button" data-rhythm="Expression">${expressionIcon}Expression</button><button type="button" data-rhythm="Mixed">${mixedIcon}Mixed</button></div>`;
       const title = card.querySelector(".mcv-rhythm-head-v6 strong");
       const setSelectedRhythm = rhythm => {
+        const previousRhythm = selectedRhythm;
         selectedRhythm = rhythm;
         title.textContent = rhythm;
         card.querySelectorAll("[data-rhythm]").forEach(item => item.classList.toggle("is-active", item.dataset.rhythm === rhythm));
-        if (rhythm !== "Expression") expressionGuideDeferred = false;
-        setHeaderMessage(rhythm === "Stimulation" ? "在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。" : "");
+        if (rhythm !== "Expression" || previousRhythm !== "Expression") {
+          if (!expressionCardDismissed) {
+            expressionGuideDeferred = false;
+            delete doc.body.dataset.mczExpressionDismissed;
+          }
+        }
+        const sessionIsActive = doc.getElementById("startPumping")?.hidden === true;
+        setHeaderMessage(rhythm === "Stimulation" && sessionIsActive ? "在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。" : "");
+        syncComfortSurfaceVisibility();
         syncComfortCards();
       };
       win.__setSelectedRhythmV6 = setSelectedRhythm;
@@ -350,22 +368,27 @@ function enhancePrecheck() {
 
     function applySavedComfort() {
       const profile = savedComfortProfile();
+      if (!profile) return;
       const current = { left: readLevel("left"), right: readLevel("right") };
       const targets = {
-        left: Math.max(current.left, Math.max(1, Math.min(MAX_LEVEL, profile?.leftLevel || 3))),
-        right: Math.max(current.right, Math.max(1, Math.min(MAX_LEVEL, profile?.rightLevel || 3)))
+        left: Math.max(1, Math.min(MAX_LEVEL, profile.leftLevel)),
+        right: Math.max(1, Math.min(MAX_LEVEL, profile.rightLevel))
       };
+      if (current.left === targets.left && current.right === targets.right) {
+        showComfortToast("当前已是保存的舒适档位", 1500);
+        return;
+      }
       stopComfortRamp();
       const start = { ...current };
       comfortRamp = { targets, current: { ...start }, paused: false, timer: 0 };
-      showComfortToast(`正在从 L${start.left} / R${start.right} 平缓升至 L${targets.left} / R${targets.right}，可随时手动调整`);
+      showComfortToast(`正在从 L${start.left} / R${start.right} 平缓调整至 L${targets.left} / R${targets.right}，可随时手动调整`);
       syncComfortCards();
       const step = () => {
         if (!comfortRamp || comfortRamp.paused) return;
         let changed = false;
         ["left", "right"].forEach(side => {
-          if (comfortRamp.current[side] < comfortRamp.targets[side]) {
-            comfortRamp.current[side] += 1;
+          if (comfortRamp.current[side] !== comfortRamp.targets[side]) {
+            comfortRamp.current[side] += Math.sign(comfortRamp.targets[side] - comfortRamp.current[side]);
             setPumpLevel(side, comfortRamp.current[side]);
             changed = true;
           }
@@ -383,7 +406,7 @@ function enhancePrecheck() {
     }
 
     function comfortState() {
-      if (comfortRamp) return { name:comfortRamp.paused ? "已暂停" : "升档中", kind:"ramping", ramp:comfortRamp };
+      if (comfortRamp) return { name:comfortRamp.paused ? "已暂停" : "调整中", kind:"ramping", ramp:comfortRamp };
       const profile = savedComfortProfile();
       const draft = comfortDraft();
       if (draft && !(draft.leftDone && draft.rightDone)) return { name:"未完成", kind:"incomplete", draft };
@@ -409,6 +432,26 @@ function enhancePrecheck() {
       card.innerHTML = `<div class="mcv-card-info-v5"><div class="mcv-card-title-row-v5"><strong class="mcv-card-title-v5">舒适档位</strong><span class="mcv-card-status-v5"></span></div><div class="mcv-card-copy-v5"></div><div class="mcv-card-meta-v5"></div></div><div class="mcv-card-actions-v5"></div>`;
     }
 
+    function showExpressionDismissConfirm() {
+      if (doc.querySelector(".mcv-comfort-dismiss-layer-v5")) return;
+      const layer = doc.createElement("section");
+      layer.className = "mcv-comfort-dismiss-layer-v5";
+      layer.innerHTML = `<div class="mcv-comfort-dismiss-dialog-v5" role="dialog" aria-modal="true" aria-labelledby="mcvComfortDismissTitle" aria-describedby="mcvComfortDismissCopy"><h3 id="mcvComfortDismissTitle">暂不设置？</h3><p id="mcvComfortDismissCopy">设置后，可平缓过渡到舒适档位。之后也能随时调整。</p><div class="mcv-comfort-dismiss-actions-v5"><button class="mcv-comfort-dismiss-continue-v5" type="button">继续设置</button><button class="mcv-comfort-dismiss-later-v5" type="button">暂不设置</button></div></div>`;
+      const continueButton = layer.querySelector(".mcv-comfort-dismiss-continue-v5");
+      const laterButton = layer.querySelector(".mcv-comfort-dismiss-later-v5");
+      continueButton.addEventListener("click", () => layer.remove());
+      laterButton.addEventListener("click", () => {
+        layer.remove();
+        expressionGuideDeferred = true;
+        expressionCardDismissed = true;
+        doc.body.dataset.mczExpressionDismissed = "true";
+        syncComfortCards();
+        syncComfortSurfaceVisibility();
+      });
+      doc.body.appendChild(layer);
+      continueButton.focus();
+    }
+
     function renderComfortCard(card) {
       if (!card) return;
       prepareComfortCard(card, card.id === "comfortPlaceholder");
@@ -422,23 +465,35 @@ function enhancePrecheck() {
       status.classList.toggle("is-active", state.kind === "using");
       actions.replaceChildren();
       actions.classList.toggle("is-ramping", state.kind === "ramping");
+      card.querySelector(".mcv-card-dismiss-v5")?.remove();
       let primary = "", secondary = "", primaryAction = null, secondaryAction = null;
       const sessionIsActive = doc.getElementById("startPumping")?.hidden === true;
-      if (sessionIsActive && selectedRhythm === "Stimulation") {
+      const comfortCardIsEnabled = comfortFeatureActivated || state.kind !== "unset";
+      const showExpressionInvite = card.id === "comfortEntry" && sessionIsActive && selectedRhythm === "Expression" && !comfortCardIsEnabled && !expressionGuideDeferred && !expressionCardDismissed;
+      card.classList.toggle("is-expression-dismissed", expressionCardDismissed);
+      card.classList.toggle("is-comfort-enabled", comfortCardIsEnabled);
+      card.classList.toggle("is-expression-invite", showExpressionInvite);
+      if (showExpressionInvite) {
+        copy.textContent = "已进入吸乳阶段";
+        meta.textContent = "花约 1 分钟，分别找到左右侧最舒服的吸力。";
+        primary = "开始校准";
+        primaryAction = () => {
+          showCalibration();
+        };
+      } else if (comfortFeatureActivated && state.kind === "unset") {
+        copy.textContent = "正在校准舒适档位";
+        meta.textContent = "调整进度会自动保存";
+        primary = "继续校准";
+        primaryAction = showCalibration;
+      } else if (sessionIsActive && selectedRhythm === "Stimulation") {
         copy.textContent = "吸乳阶段即将开始";
         meta.textContent = "感觉舒适时，可每次上调 1 档。";
-      } else if (sessionIsActive && selectedRhythm === "Expression" && !expressionGuideDeferred) {
-        status.textContent = "吸乳阶段";
-        copy.textContent = "已进入吸乳阶段";
-        meta.textContent = "可花约 1 分钟，找到左右侧最舒服的吸力。";
-        primary = "开始校准"; primaryAction = () => showCalibration();
-        secondary = "稍后再说"; secondaryAction = () => { expressionGuideDeferred = true; syncComfortCards(); };
       } else if (state.kind === "unset") {
-        copy.textContent = "分别找到左右两侧舒服的吸力"; meta.textContent = "约需1分钟";
-        primary = "舒适启动"; primaryAction = applySavedComfort;
+        copy.textContent = "尚未设置舒适档位"; meta.textContent = "可随时为左右侧设置舒适吸力。";
+        primary = "设置舒适档位"; primaryAction = showCalibration;
       } else if (state.kind === "ramping") {
         const { current, targets, paused } = state.ramp;
-        copy.textContent = "正在平缓升至舒适档位";
+        copy.textContent = "正在平缓调整至舒适档位";
         meta.textContent = `L${current.left} / R${current.right} → L${targets.left} / R${targets.right}`;
         primary = paused ? "继续升档" : "暂停";
         primaryAction = () => {
@@ -449,7 +504,7 @@ function enhancePrecheck() {
               if (!comfortRamp || comfortRamp.paused) return;
               let changed = false;
               ["left", "right"].forEach(side => {
-                if (comfortRamp.current[side] < comfortRamp.targets[side]) { comfortRamp.current[side] += 1; setPumpLevel(side, comfortRamp.current[side]); changed = true; }
+                if (comfortRamp.current[side] !== comfortRamp.targets[side]) { comfortRamp.current[side] += Math.sign(comfortRamp.targets[side] - comfortRamp.current[side]); setPumpLevel(side, comfortRamp.current[side]); changed = true; }
               });
               syncComfortCards();
               if (changed) comfortRamp.timer = win.setTimeout(resume, 2000);
@@ -469,14 +524,12 @@ function enhancePrecheck() {
           syncComfortCards();
         };
       } else if (state.kind === "incomplete") {
-        copy.textContent = draftSummary(state.draft); meta.textContent = "进度已自动保存";
-        primary = "继续设置"; primaryAction = showCalibration;
-      } else if (state.kind === "unapplied") {
-        copy.textContent = `已保存  L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`; meta.textContent = "当前档位与舒适基准不同";
-        primary = "舒适启动"; primaryAction = applySavedComfort; secondary = "重新设置"; secondaryAction = openComfortLearning;
-      } else if (state.kind === "using") {
-        copy.textContent = `L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`; meta.textContent = "当前正在使用保存档位";
-        secondary = "重新设置"; secondaryAction = openComfortLearning;
+        copy.textContent = draftSummary(state.draft); meta.textContent = "校准进度已自动保存";
+        primary = "继续校准"; primaryAction = showCalibration;
+      } else if (state.kind === "unapplied" || state.kind === "using") {
+        copy.textContent = `已保存  L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`;
+        meta.textContent = state.kind === "using" ? "当前正在使用保存档位" : "当前档位与舒适基准不同";
+        primary = "舒适启动"; primaryAction = applySavedComfort; secondary = "重新校准"; secondaryAction = openComfortLearning;
       } else {
         copy.textContent = `已保存  L ${state.profile.leftLevel} · R ${state.profile.rightLevel}`; meta.textContent = "近期经常手动调整";
         primary = "重新校准"; primaryAction = openComfortLearning;
@@ -489,8 +542,17 @@ function enhancePrecheck() {
         const button = doc.createElement("button"); button.type = "button"; button.className = "mcv-card-primary-v5"; button.textContent = primary; button.setAttribute("aria-label", primary);
         button.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); primaryAction(); }); actions.appendChild(button);
       }
+      if (showExpressionInvite) {
+        const dismiss = doc.createElement("button"); dismiss.type = "button"; dismiss.className = "mcv-card-dismiss-v5"; dismiss.textContent = "×"; dismiss.setAttribute("aria-label", "关闭舒适档位提示");
+        dismiss.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          showExpressionDismissConfirm();
+        });
+        card.appendChild(dismiss);
+      }
       if (state.kind === "ramping") {
-        const cancel = doc.createElement("button"); cancel.type = "button"; cancel.className = "mcv-card-tertiary-v5"; cancel.textContent = "取消自动升档"; cancel.setAttribute("aria-label", "取消自动升档");
+        const cancel = doc.createElement("button"); cancel.type = "button"; cancel.className = "mcv-card-tertiary-v5"; cancel.textContent = "取消舒适启动"; cancel.setAttribute("aria-label", "取消舒适启动");
         cancel.addEventListener("click", event => { event.preventDefault(); event.stopPropagation(); stopComfortRamp("已取消自动升档"); }); actions.appendChild(cancel);
       }
     }
@@ -566,15 +628,26 @@ function enhancePrecheck() {
       syncComfortCards();
     }
 
+    function syncComfortSurfaceVisibility() {
+      const sessionIsActive = doc.getElementById("startPumping")?.hidden === true;
+      const shouldHide = !sessionIsActive || selectedRhythm !== "Expression" || expressionCardDismissed;
+      if (shouldHide) {
+        doc.body.dataset.mczComfortHidden = selectedRhythm || "Idle";
+        return;
+      }
+      delete doc.body.dataset.mczComfortHidden;
+      delete doc.body.dataset.mczExpressionDismissed;
+      retainComfortCardDuringSession();
+    }
+
     function hideComfortCards() {
       // The comfort card is a persistent session affordance. Base-flow state
       // changes must not remove it, including while calibration is open.
       retainComfortCardDuringSession();
     }
 
-    // Keep the card visible from the initial control screen onward. The
-    // observer below restores it if the underlying prototype toggles it.
-    retainComfortCardDuringSession();
+    // Initial and stimulation views contain only the manual level controls.
+    syncComfortSurfaceVisibility();
 
     // The level panel must keep its idle height while pumping starts.  The
     // running-state layout changes below it must never stretch the sliders.
@@ -612,6 +685,61 @@ function enhancePrecheck() {
       if (win.navigator.vibrate) win.navigator.vibrate(pattern || 8);
     }
 
+    function enhanceLinkedLevelDragging() {
+      const bothControl = doc.getElementById("bothControl");
+      if (bothControl && bothControl.dataset.linkedControlV7 !== "true") {
+        bothControl.dataset.linkedControlV7 = "true";
+        const syncLinkedLabel = () => {
+          const linked = bothControl.getAttribute("aria-pressed") === "true";
+          bothControl.textContent = linked ? "Both" : "Separate";
+          bothControl.setAttribute("aria-label", linked ? "Both，左右档位联动，点击取消联动" : "Separate，左右档位独立，点击开启联动");
+        };
+        bothControl.addEventListener("click", () => win.setTimeout(syncLinkedLabel, 0));
+        syncLinkedLabel();
+      }
+
+      ["left", "right"].forEach(side => {
+        const zone = doc.getElementById(side + "LevelZone");
+        if (!zone || zone.dataset.continuousDragV7 === "true") return;
+        zone.dataset.continuousDragV7 = "true";
+        let pointerId = null;
+        let lastLevel = null;
+        const updateFromPointer = event => {
+          const rect = zone.getBoundingClientRect();
+          if (!rect.height) return;
+          const ratio = Math.max(0, Math.min(1, (rect.bottom - event.clientY) / rect.height));
+          const next = 1 + Math.round(ratio * (MAX_LEVEL - 1));
+          if (next === lastLevel) return;
+          lastLevel = next;
+          if (typeof win.setLevel === "function") win.setLevel(side, next);
+          buzz(6);
+        };
+        zone.addEventListener("pointerdown", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          pointerId = event.pointerId;
+          lastLevel = null;
+          zone.setPointerCapture(pointerId);
+          zone.classList.add("is-dragging");
+          updateFromPointer(event);
+        });
+        zone.addEventListener("pointermove", event => {
+          if (pointerId !== event.pointerId || !zone.hasPointerCapture(pointerId)) return;
+          event.preventDefault();
+          updateFromPointer(event);
+        });
+        const finish = event => {
+          if (pointerId !== event.pointerId) return;
+          pointerId = null;
+          lastLevel = null;
+          zone.classList.remove("is-dragging");
+        };
+        zone.addEventListener("pointerup", finish);
+        zone.addEventListener("pointercancel", finish);
+      });
+    }
+    enhanceLinkedLevelDragging();
+
     function removeComfortBubble(immediate) {
       win.clearTimeout(comfortBubbleTimer);
       comfortBubbleTimer = 0;
@@ -632,6 +760,11 @@ function enhancePrecheck() {
       if (isStimulation) {
         removePhasePrompt();
         setHeaderMessage("在舒适范围内，试试更有力度的吸力，帮助乳汁更顺畅的开始流出。");
+        return;
+      }
+      if (phase === "Expression") {
+        removePhasePrompt();
+        syncComfortCards();
         return;
       }
       if (trendPromptIsAvailable() || doc.getElementById("startPumping")?.hidden !== true) return;
@@ -755,7 +888,11 @@ function enhancePrecheck() {
       lockOriginalLevelModuleHeight();
       win.clearTimeout(comfortBubbleDemoTimer);
       comfortBubbleDismissed = false;
-      expressionGuideDeferred = false;
+      if (!expressionCardDismissed) {
+        expressionGuideDeferred = false;
+        delete doc.body.dataset.mczExpressionDismissed;
+      }
+      comfortFeatureActivated = Boolean(savedComfortProfile() || comfortDraft());
       removeComfortBubble(true);
       removePhasePrompt();
       syncComfortCards();
@@ -997,6 +1134,7 @@ function enhancePrecheck() {
           hideCalibrationInvite();
           showPumpingLog();
         }
+        syncComfortSurfaceVisibility();
       }).observe(startPumpingButton, { attributes:true, attributeFilter:["hidden"] });
     }
     ["leftLevelChip", "rightLevelChip"].forEach(id => {
@@ -1007,13 +1145,23 @@ function enhancePrecheck() {
     function showCalibration(options = {}) {
       const existing = doc.getElementById("cnCalibrationV4");
       if (existing) return;
+      // Starting calibration converts the dismissible invitation into a
+      // persistent device-control card immediately, before the sheet opens.
+      comfortFeatureActivated = true;
+      expressionGuideDeferred = true;
+      expressionCardDismissed = false;
+      delete doc.body.dataset.mczExpressionDismissed;
+      doc.querySelector(".mcv-comfort-dismiss-layer-v5")?.remove();
+      syncComfortCards();
       retainComfortCardDuringSession();
       comfortBubbleDismissed = true;
       removeComfortBubble(true);
 
       const draft = safeRead(DRAFT_KEY);
-      let left = draft && Number.isFinite(draft.leftLevel) ? draft.leftLevel : readLevel("left");
-      let right = draft && Number.isFinite(draft.rightLevel) ? draft.rightLevel : readLevel("right");
+      const saved = savedComfortProfile();
+      const levelsBeforeCalibration = { left:readLevel("left"), right:readLevel("right") };
+      let left = draft && Number.isFinite(draft.leftLevel) ? draft.leftLevel : saved?.leftLevel ?? levelsBeforeCalibration.left;
+      let right = draft && Number.isFinite(draft.rightLevel) ? draft.rightLevel : saved?.rightLevel ?? levelsBeforeCalibration.right;
       let side = draft && draft.side === "right" ? "right" : "left";
       let leftDone = Boolean(draft && draft.leftDone);
       let rightDone = Boolean(draft && draft.rightDone);
@@ -1029,11 +1177,11 @@ function enhancePrecheck() {
       const style = doc.createElement("style");
       style.id = "cnCalibrationV4Style";
       style.textContent = `
-        .comfort-v4{position:absolute;z-index:120;inset:calc(28% - 16px) 14px calc(16px + env(safe-area-inset-bottom));display:grid;grid-template-rows:auto auto 326px auto 1fr;gap:12px;overflow:hidden;padding:22px 18px calc(116px + env(safe-area-inset-bottom));border:1px solid rgba(255,255,255,.86);border-radius:34px;color:#3c2930;background:#fffaf7;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;box-shadow:0 0 0 100vmax rgba(58,35,43,.18),0 -12px 34px rgba(85,39,53,.15),0 8px 20px rgba(85,39,53,.08);animation:v4-sheet-rise .36s cubic-bezier(.2,.9,.25,1)}.comfort-v4.is-seamless{animation:none!important}
+        .comfort-v4{position:absolute;z-index:120;inset:calc(28% - 16px) 0 calc(16px + env(safe-area-inset-bottom));display:grid;grid-template-rows:auto auto 326px auto 1fr;gap:12px;overflow:hidden;padding:22px 18px calc(116px + env(safe-area-inset-bottom));border:1px solid rgba(255,255,255,.86);border-radius:34px;color:#3c2930;background:#fffaf7;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;box-shadow:0 0 0 100vmax rgba(58,35,43,.18),0 -12px 34px rgba(85,39,53,.15),0 8px 20px rgba(85,39,53,.08);animation:v4-sheet-rise .36s cubic-bezier(.2,.9,.25,1)}.comfort-v4.is-seamless{animation:none!important}
         .comfort-v4 *{box-sizing:border-box}.comfort-v4 button{min-width:44px;min-height:44px;touch-action:manipulation}.comfort-v4 button:focus-visible{outline:3px solid rgba(142,0,40,.28);outline-offset:2px}
         .v4-status{position:relative;z-index:6;width:100%;height:154px;min-height:154px;padding:14px 16px 20px;box-sizing:border-box;border-radius:30px;color:#fff;background:linear-gradient(125deg,#98012e,#bd2f55 58%,#cf627d);box-shadow:0 14px 30px rgba(113,30,57,.16)}.v4-status:after{content:\"\";position:absolute;left:50%;bottom:8px;width:108px;height:5px;border-radius:99px;background:#fff;transform:translateX(-50%)}.v4-status-top{display:grid;grid-template-columns:62px minmax(0,1fr) 24px;align-items:center;gap:12px;height:58px}.v4-status-name{display:flex;align-items:center;gap:8px;font-size:24px;line-height:1;font-weight:850}.v4-status-swap{color:#efb5c4;font-size:13px;line-height:.8}.v4-status-arrow{justify-self:end;color:#efb5c4;font-size:32px;font-weight:300}.v4-status-divider{display:block;height:1px;margin:0;background:rgba(255,255,255,.2)}.v4-status-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:10px}
         .v4-device{width:62px;height:58px;border-radius:18px;position:relative;display:grid;place-items:center;overflow:hidden;background:#fff;box-shadow:inset 0 -5px 10px rgba(62,27,39,.14),0 6px 14px rgba(65,0,18,.12)}.v4-device img{display:block;width:90%;height:90%;padding:0;object-fit:contain}.v4-device.is-running:after{content:\"\";position:absolute;inset:14px;border:1px solid rgba(255,255,255,.8);border-radius:50%;animation:v4-breathe 2s ease-in-out infinite}.v4-status-copy{min-width:0}.v4-status-copy strong,.v4-status-copy span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v4-status-copy strong{font-size:22px}.v4-status-copy span{margin-top:5px;font-size:13px;color:#f8d8e1}.v4-status-copy .v4-time{display:inline;margin:0;font-style:normal}.v4-pump-controls{display:flex;align-items:center}.v4-status .v4-pause{display:grid;place-items:center;width:58px;height:48px;border:0;border-radius:22px;color:#fff;background:#870022;font-size:19px;font-weight:800}.v4-status .v4-end{display:none}
-        .v4-head{position:relative;text-align:center;padding:2px 62px 0 12px}.v4-back{position:absolute;top:0;right:0;width:46px;height:46px;border-radius:50%;color:#4a343c;background:#fff;box-shadow:0 8px 18px rgba(62,27,39,.08);font-size:25px}.v4-help{position:absolute;top:50%;right:10px;display:grid;place-items:center;width:24px!important;min-width:24px!important;height:24px!important;min-height:24px!important;padding:0!important;transform:translateY(-50%);border-radius:50%;color:#6c3545;background:#fff;font-size:12px;font-weight:800;line-height:1;box-shadow:0 3px 8px rgba(62,27,39,.07)}.v4-head h2{margin:0;color:#222;font-size:20px;line-height:1.25;font-weight:600;letter-spacing:.5px}.v4-head p{margin:5px 0 0;color:#888;font-size:13px;font-weight:400}.v4-progress{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.v4-progress i{height:4px;border-radius:99px;background:#eadde1}.v4-progress i.is-complete,.v4-progress i.is-active{background:#b82e54}
+        .v4-head{position:relative;text-align:center;padding:2px 62px 0}.v4-back{position:absolute;top:0;right:0;width:46px;height:46px;border-radius:50%;color:#4a343c;background:#fff;box-shadow:0 8px 18px rgba(62,27,39,.08);font-size:25px}.v4-help{position:absolute;top:50%;right:10px;display:grid;place-items:center;width:24px!important;min-width:24px!important;height:24px!important;min-height:24px!important;padding:0!important;transform:translateY(-50%);border-radius:50%;color:#6c3545;background:#fff;font-size:12px;font-weight:800;line-height:1;box-shadow:0 3px 8px rgba(62,27,39,.07)}.v4-head h2{margin:0;color:#222;font-size:20px;line-height:1.25;font-weight:600;letter-spacing:.5px}.v4-head p{margin:5px 0 0;color:#888;font-size:13px;font-weight:400}.v4-progress{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.v4-progress i{height:4px;border-radius:99px;background:#eadde1}.v4-progress i.is-complete,.v4-progress i.is-active{background:#b82e54}
         .v4-sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}.v4-side{height:42px;border:1px solid #e4d9dc;border-radius:999px;color:#444;background:#f7f2f3;font-size:14px;font-weight:400}.v4-side.is-active{color:#fff;border-color:#92002c;background:#92002c;font-weight:600}.v4-side.is-done{color:#8e0028;background:#fff;font-weight:600}.v4-side:disabled{cursor:not-allowed;opacity:.52}
         .v4-adjust{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-template-rows:1fr;align-items:center;column-gap:12px;width:min(100%,320px);justify-self:center;min-height:0;padding:10px 0 42px}.v4-control-stack{grid-column:2;grid-row:1;justify-self:stretch;align-self:center;display:flex;flex-direction:column;justify-content:space-between;height:184px;min-width:0}.v4-control-row{display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:7px;min-width:0}.v4-control-row span{color:#999;font-size:12px;font-weight:400;line-height:1.3;text-align:left}.v4-step{width:46px;height:46px;border-radius:50%;color:#96002d;background:#fce6eb;font-size:24px;box-shadow:0 7px 16px rgba(104,0,31,.07)}.v4-step:disabled{color:#b9afb2;background:#f0ebec;box-shadow:none}
         .v4-rail-wrap{grid-column:1;grid-row:1;justify-self:center;align-self:center;display:grid;place-items:center;min-height:0}.v4-rail{position:relative;width:126px;height:224px;touch-action:none;cursor:ns-resize}.v4-rail:before{content:"";position:absolute;top:10px;bottom:10px;left:50%;width:58px;border-radius:32px;background:linear-gradient(#f8eff1,#f2edef);transform:translateX(-50%)}.v4-ticks{position:absolute;inset:18px 0;display:flex;flex-direction:column-reverse;justify-content:space-between;align-items:center}.v4-ticks i{display:block;width:38px;height:3px;border-radius:99px;background:#e7cad2}.v4-ticks i:nth-child(n+6){background:#d69aaa}.v4-ticks i:nth-child(n+11){background:#ba536f}
@@ -1049,7 +1197,7 @@ function enhancePrecheck() {
         .v4-result{grid-column:1/-1;align-self:center;padding:28px 20px;border-radius:28px;text-align:center;background:#fff;box-shadow:0 18px 44px rgba(68,34,45,.12)}.v4-result h2{margin:0;font-size:22px}.v4-result-levels{margin:18px 0 8px;color:#850027;font-size:28px;font-weight:850}.v4-result p{margin:0 0 18px;color:#85787d;font-size:11px;line-height:1.55}
         .comfort-v4.is-result{display:grid;place-items:center;padding:24px}.comfort-v4.is-result .v4-result{grid-column:auto;width:100%;max-width:340px;align-self:auto}.v4-save:active{transform:scale(.985);filter:brightness(.97)}
         @keyframes v4-breathe{0%,100%{opacity:.2;transform:scale(.85)}50%{opacity:.8;transform:scale(1.25)}}@keyframes v4-fade-in{from{opacity:0}to{opacity:1}}@keyframes v4-sheet-rise{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
-        @media (max-height:760px){.comfort-v4{inset:calc(28% - 10px) 10px calc(10px + env(safe-area-inset-bottom));grid-template-rows:auto auto 292px auto 1fr;gap:8px;padding-top:16px;padding-bottom:108px;border-radius:28px}.v4-adjust{padding-top:4px}.v4-rail{height:196px}.v4-head h2{font-size:20px}.v4-actions{bottom:calc(10px + env(safe-area-inset-bottom))}.v4-save{height:54px}}
+        @media (max-height:760px){.comfort-v4{inset:calc(28% - 10px) 0 calc(10px + env(safe-area-inset-bottom));grid-template-rows:auto auto 292px auto 1fr;gap:8px;padding-top:16px;padding-bottom:108px;border-radius:28px}.v4-adjust{padding-top:4px}.v4-rail{height:196px}.v4-head h2{font-size:20px}.v4-actions{bottom:calc(10px + env(safe-area-inset-bottom))}.v4-save{height:54px}}
         @media (prefers-reduced-motion:reduce){.comfort-v4 *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
       `;
       doc.head.appendChild(style);
@@ -1205,10 +1353,8 @@ function enhancePrecheck() {
 
 function finishSave() {
   const resultProfile = profile();
-  // Calibration changes are live device values; saving must not pause or
-  // reset the running pumping session.
-  setPumpLevel("left", resultProfile.leftLevel);
-  setPumpLevel("right", resultProfile.rightLevel);
+  // Save the discovered target, then restore the live levels from before
+  // calibration. "Comfort start" applies the target gradually on demand.
   safeWrite(PROFILE_KEY, resultProfile);
   syncComfortPlaceholder();
   safeRemove(DRAFT_KEY);
@@ -1228,8 +1374,8 @@ function finishSave() {
     if (!layer.isConnected) return;
     layer.remove();
     closeCalibration(false);
-    setPumpLevel("left", resultProfile.leftLevel);
-    setPumpLevel("right", resultProfile.rightLevel);
+    setPumpLevel("left", levelsBeforeCalibration.left);
+    setPumpLevel("right", levelsBeforeCalibration.right);
     syncComfortCards();
     if (typeof win.showToast === "function") win.showToast("舒适档位已保存");
   }, 1500);
@@ -1285,7 +1431,7 @@ function finishSave() {
           if (side === "left") {
             leftDone = true;
             side = "right";
-            right = 1;
+            if (!saved) right = 1;
             setPumpLevel("right", right);
             clearObservation();
             render();
@@ -1336,9 +1482,25 @@ function finishSave() {
       render();
       page.querySelector(".v4-back").focus();
       if (draft) flash("已恢复上次未完成的设置");
+      else if (saved) flash(`已载入保存档位 L${saved.leftLevel} / R${saved.rightLevel}`);
     }
 
     win.__showCalibrationV4 = showCalibration;
+
+    // The pump artwork is introduced by this enhancement after the iframe's
+    // load event. Wait for that asset, fonts, and the delayed layout pass
+    // before exposing the first visible frame.
+    const pumpArtwork = new win.Image();
+    pumpArtwork.src = "../assets/dual-pump-transparent-v4.png";
+    const artworkReady = typeof pumpArtwork.decode === "function" ? pumpArtwork.decode().catch(() => {}) : Promise.resolve();
+    const fontsReady = doc.fonts && doc.fonts.ready ? doc.fonts.ready.catch(() => {}) : Promise.resolve();
+    Promise.all([artworkReady, fontsReady]).then(() => {
+      win.setTimeout(() => {
+        win.requestAnimationFrame(() => {
+          win.requestAnimationFrame(() => frame.classList.add("is-prototype-ready"));
+        });
+      }, 220);
+    });
   }
 
   const frame = document.getElementById("currentFrame");
