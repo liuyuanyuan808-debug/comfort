@@ -341,36 +341,6 @@
   })();
 </script>
 <script>
-  /* One-time, post-adjustment save prompt for manual suction changes only. */
-  (() => {
-    const frame = document.getElementById('currentFrame');
-    const install = () => {
-      const doc = frame?.contentDocument, win = frame?.contentWindow;
-      if (!doc || !win || doc.getElementById('comfortSavePromptStyle')) return;
-      const style = doc.createElement('style'); style.id = 'comfortSavePromptStyle';
-      style.textContent = `.mcz-save-scrim{position:fixed;z-index:110;inset:0;display:grid;place-items:center;padding:20px;background:rgba(255,221,225,.20);animation:mcz-save-fade .2s ease-out}.mcz-save-dialog{position:relative;width:min(286px,calc(100vw - 48px));padding:25px 20px 20px;border:1px solid rgba(255,221,225,.9);border-radius:28px;background:#fffdfa;box-shadow:0 18px 46px rgba(62,0,16,.16);text-align:center;animation:mcz-save-rise .22s cubic-bezier(.2,.9,.25,1)}.mcz-save-close{position:absolute;top:5px;right:5px;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:#75696e;background:transparent;font-size:24px;line-height:1}.mcz-save-dialog h3{margin:4px 30px 8px;color:#3e0010;font-family:"Exposure[-10]",Georgia,serif;font-size:22px;font-weight:400;line-height:1.25}.mcz-save-dialog p{margin:0;color:#75696e;font-size:12px;line-height:1.5}.mcz-save-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.mcz-save-actions button{min-height:44px;border-radius:999px;font-size:12px;font-weight:700}.mcz-save-confirm{color:#fff;background:#770523;box-shadow:0 7px 16px rgba(119,5,35,.16)}.mcz-save-later{color:#770523;border:1px solid #ffdde1;background:#fff7f8}@keyframes mcz-save-fade{from{opacity:0}to{opacity:1}}@keyframes mcz-save-rise{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}.mcz-save-toast{position:fixed;z-index:111;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));padding:10px 16px;border-radius:999px;color:#fff;background:rgba(62,0,16,.88);font-size:12px;font-weight:600;box-shadow:0 8px 22px rgba(62,0,16,.18);transform:translateX(-50%);animation:mcz-toast-in .18s ease-out}@keyframes mcz-toast-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}`;
-      doc.head.appendChild(style);
-      let timer = 0, shown = false, suppressed = false, wasLive = false, manual = false;
-      const levels = () => ({left:Number(doc.getElementById('leftLevelChip')?.textContent?.trim() || 1),right:Number(doc.getElementById('rightLevelChip')?.textContent?.trim() || 1)});
-      const live = () => { const start=doc.getElementById('startPumping'), actions=doc.getElementById('controlActions'); return !!start?.hidden && !!actions && !actions.hidden; };
-      const pumping = () => live() && !doc.getElementById('controlActions')?.classList.contains('is-paused');
-      const clear = () => { if(timer) win.clearTimeout(timer); timer=0; };
-      const dismiss = once => { doc.querySelector('.mcz-save-scrim')?.remove(); if(once){suppressed=true;shown=true;} };
-      const toast = () => { doc.querySelector('.mcz-save-toast')?.remove(); const item=doc.createElement('div'); item.className='mcz-save-toast'; item.textContent='已保存舒适档位'; doc.body.appendChild(item); win.setTimeout(()=>item.remove(),1500); };
-      const save = () => { const value=levels(); try { win.localStorage.setItem('mobileFlowComfortProfileV3',JSON.stringify({deviceId:'mobile-flow',phase:'expression',leftLevel:value.left,rightLevel:value.right,status:'candidate',comfortableConfirmations:0,lastValidatedAt:new Date().toISOString(),version:2})); } catch(_) {} ['left','right'].forEach(side=>{const chip=doc.getElementById(side+'LevelChip');if(chip)chip.textContent=value[side];}); doc.querySelectorAll('.mcv-comfort-card-v4').forEach(card=>card.dataset.mczState=''); dismiss(true); toast(); };
-      const show = () => { timer=0; if(!pumping()||suppressed||shown||doc.querySelector('.mcz-save-scrim'))return; shown=true; const scrim=doc.createElement('section'); scrim.className='mcz-save-scrim'; scrim.innerHTML='<div class="mcz-save-dialog" role="dialog" aria-modal="true"><button class="mcz-save-close" type="button" aria-label="关闭">×</button><h3>检测到档位调整</h3><p>是否保存为你的舒适负压档位？</p><div class="mcz-save-actions"><button class="mcz-save-confirm" type="button">保存</button><button class="mcz-save-later" type="button">继续调整</button></div></div>'; scrim.addEventListener('click',e=>{if(e.target===scrim)dismiss(true)}); scrim.querySelector('.mcz-save-close').addEventListener('click',()=>dismiss(true)); scrim.querySelector('.mcz-save-later').addEventListener('click',()=>dismiss(true)); scrim.querySelector('.mcz-save-confirm').addEventListener('click',save); doc.body.appendChild(scrim); };
-      const schedule = () => { clear(); if(!pumping()||suppressed)return; if(doc.querySelector('.mcz-save-scrim')){dismiss(false);shown=false;} timer=win.setTimeout(show,5000); };
-      const session = () => { const now=live(); if(now&&!wasLive){shown=false;suppressed=false;clear();} if(!now)clear(); wasLive=now; };
-      doc.addEventListener('pointerdown',e=>{manual=!!e.target.closest('#leftLevelZone,#rightLevelZone')},true);
-      doc.addEventListener('pointerup',()=>{if(!manual)return;manual=false;win.setTimeout(schedule,0)},true);
-      doc.addEventListener('pointercancel',()=>{manual=false},true);
-      doc.addEventListener('keydown',e=>{if(e.target.closest('#leftLevelChip,#rightLevelChip')&&['ArrowUp','ArrowDown'].includes(e.key))win.setTimeout(schedule,0)},true);
-      new win.MutationObserver(session).observe(doc.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class']}); session();
-    };
-    frame.addEventListener('load',install); setTimeout(install,400);
-  })();
-</script>
-<script>
   /* Momcozy 3.0 light semantic theme for this standalone IoT prototype. */
   (() => {
     const frame = document.getElementById('currentFrame');
