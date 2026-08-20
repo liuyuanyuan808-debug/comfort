@@ -475,7 +475,7 @@ function enhancePrecheck() {
       card.classList.toggle("is-expression-invite", showExpressionInvite);
       if (showExpressionInvite) {
         copy.textContent = "已进入吸乳阶段";
-        meta.textContent = "花约 1 分钟，分别找到左右侧最舒服的吸力。";
+        meta.textContent = "约 1 分钟，找到左右侧舒适吸力";
         primary = "开始校准";
         primaryAction = () => {
           showCalibration();
@@ -774,7 +774,7 @@ function enhancePrecheck() {
       prompt.setAttribute("role", "dialog");
       prompt.setAttribute("aria-modal", "false");
       prompt.setAttribute("aria-label", "吸乳阶段提示");
-      prompt.innerHTML = `<button type="button" class="mcv-phase-prompt-close-v6" aria-label="关闭提示">×</button><h3>已进入吸乳阶段</h3><p>现在可以花约 1 分钟，分别找到左右侧最舒服的吸力。</p><div class="mcv-phase-prompt-actions-v6"><button type="button" class="mcv-phase-prompt-primary-v6">开始校准</button><button type="button" class="mcv-phase-prompt-secondary-v6">稍后再说</button></div>`;
+      prompt.innerHTML = `<button type="button" class="mcv-phase-prompt-close-v6" aria-label="关闭提示">×</button><h3>已进入吸乳阶段</h3><p>约 1 分钟，找到左右侧舒适吸力</p><div class="mcv-phase-prompt-actions-v6"><button type="button" class="mcv-phase-prompt-primary-v6">开始校准</button><button type="button" class="mcv-phase-prompt-secondary-v6">稍后再说</button></div>`;
       doc.body.appendChild(prompt);
       const close = () => removePhasePrompt();
       prompt.querySelector(".mcv-phase-prompt-close-v6").addEventListener("click", close);
